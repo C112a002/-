@@ -3,6 +3,66 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<!--
+  禁止被嵌入：這個編輯器只能直接開啟，不能被放進其他網站的 iframe / frame 裡。
+  單一 HTML 檔沒辦法自己設定 HTTP 標頭，所以下面用 JavaScript 做檢查（只在 Claude、本機或原生 App 裡才允許被框起來）。
+  如果你把這個檔案放在自己的伺服器上，建議再加上標頭：
+    Content-Security-Policy: frame-ancestors 'none'      （舊瀏覽器再加 X-Frame-Options: DENY）
+-->
+<script>
+(function () {
+  var framed;
+  try { framed = window.top !== window.self; } catch (e) { framed = true; }
+  if (!framed) return;                                   // 沒有被嵌入：直接用
+  var okHost = function (h) {
+    return /(^|\.)(claude\.ai|claude\.com|claudeusercontent\.com|anthropic\.com)$/.test(h) || h === 'localhost' || h === '127.0.0.1' || h === '[::1]';
+  };
+  var origins = [];
+  try { if (location.ancestorOrigins && location.ancestorOrigins.length) origins = Array.prototype.slice.call(location.ancestorOrigins); } catch (e) { /* 略過 */ }
+  if (!origins.length) { try { if (document.referrer) origins = [new URL(document.referrer).origin]; } catch (e) { /* 略過 */ } }
+  // 外面每一層網頁都檢查：不是 http(s)（file:、app:、null…）的視為本機或原生 App；Claude 自己的網域也允許
+  var untrusted = origins.some(function (o) {
+    if (!/^https?:\/\//i.test(o)) return false;
+    try { return !okHost(new URL(o).hostname.toLowerCase()); } catch (e) { return false; }
+  });
+  if (!untrusted) return;
+  var root = document.documentElement;
+  var block = function () {
+    window.__tmBlocked = true;
+    root.className += ' tm-blocked';
+    var st = document.createElement('style');
+    st.textContent = '.tm-blocked body{display:none!important}';
+    root.appendChild(st);
+    var box = document.createElement('div');
+    box.id = 'tm-block';
+    box.style.cssText = 'position:fixed;inset:0;z-index:2147483647;display:grid;place-items:center;padding:24px;background:#f1f4f9;color:#1a2133;font:16px/1.6 system-ui,-apple-system,sans-serif;text-align:center';
+    var inner = document.createElement('div');
+    inner.style.maxWidth = '440px';
+    inner.innerHTML = '<div style="font-size:44px">🐒</div><h1 style="font-size:20px;margin:8px 0">這個頁面不允許被嵌入<br>This page can\u2019t be embedded</h1>'
+      + '<p>為了安全，這個編輯器只能直接開啟，不能放進其他網站的框架裡。<br>For safety, this editor can only be opened directly, not inside a frame on another site.</p>';
+    if (/^https?:/i.test(location.href)) {
+      var a = document.createElement('a');
+      a.href = location.href; a.target = '_blank'; a.rel = 'noopener';
+      a.textContent = '直接開啟 / Open it directly';
+      a.style.cssText = 'display:inline-block;margin-top:8px;padding:8px 16px;border-radius:10px;background:#f6c026;color:#2b2200;font-weight:700;text-decoration:none';
+      inner.appendChild(a);
+    }
+    box.appendChild(inner);
+    root.appendChild(box);
+    root.style.visibility = '';
+  };
+  // 在 Claude 的執行環境裡（頁面有 window.claude）也允許；等一下再判斷，沒有的話就擋下來
+  window.__tmGate = new Promise(function (resolve) {
+    root.style.visibility = 'hidden';
+    var t0 = Date.now();
+    (function poll() {
+      if (window.claude) { root.style.visibility = ''; return resolve(true); }
+      if (Date.now() - t0 > 2500) { block(); return resolve(false); }
+      setTimeout(poll, 100);
+    })();
+  });
+})();
+</script>
 <title>竄改猴積木編輯器</title>
 <style>
 :root{
@@ -42,6 +102,8 @@ button{font:inherit;color:inherit}
 .brand{display:flex;align-items:center;gap:8px;font-weight:800;font-size:16px;letter-spacing:.02em;white-space:nowrap}
 .brand .logo{display:grid;place-items:center;width:32px;height:32px;border-radius:10px;background:var(--accent);font-size:19px;box-shadow:inset 0 -3px 0 rgba(0,0,0,.16)}
 .brand small{font-weight:500;color:var(--muted);font-size:12px}
+.brand .ibtn{margin-left:-2px;font-size:19px}
+:lang(zh-Hant) #btnExport{gap:0}
 .top-actions{margin-left:auto;display:flex;align-items:center;gap:4px}
 .top-actions .sep{width:1px;height:22px;background:var(--line);margin:0 6px}
 .ibtn,.tbtn{display:inline-flex;align-items:center;justify-content:center;gap:6px;height:36px;min-width:36px;padding:0 9px;border:0;background:transparent;border-radius:10px;cursor:pointer;font-weight:600;white-space:nowrap}
@@ -108,6 +170,7 @@ button{font:inherit;color:inherit}
 #emptyHint .row{display:flex;gap:8px;justify-content:center;flex-wrap:wrap}
 #wsCtl{position:absolute;right:12px;bottom:12px;display:flex;flex-direction:column;gap:6px;z-index:5}
 #wsCtl .ibtn{background:var(--panel);border:1px solid var(--line);box-shadow:0 2px 8px rgba(20,30,60,.12);width:38px;height:38px}
+#wsCtl .ibtn[disabled]{opacity:.55}
 #selBar{position:absolute;left:50%;bottom:14px;transform:translateX(-50%);z-index:6;display:none;align-items:center;gap:6px;padding:6px 8px 6px 14px;max-width:calc(100% - 72px);background:var(--ink);color:var(--panel);border-radius:999px;box-shadow:var(--shadow)}
 #selBar.show{display:flex}
 #selBar .nm{max-width:34vw;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:600;font-size:13px}
@@ -248,13 +311,38 @@ code.i{font-family:var(--mono);font-size:12.5px;background:var(--panel2);border:
   #codePane{position:absolute;right:0;top:0;bottom:0;width:min(460px,92%);z-index:20;box-shadow:var(--shadow)}
 }
 
+/* ---------- 測試 ---------- */
+.tframe{display:block;width:100%;height:210px;border:1px solid var(--line);border-radius:12px;background:#fff;margin:0 0 10px}
+.tlog{min-height:44px;max-height:180px;overflow:auto;padding:8px 10px;border:1px solid var(--line);border-radius:12px;background:var(--code-bg);color:var(--code-ink);font:12.5px/1.6 var(--mono);white-space:pre-wrap;word-break:break-word}
+.tlog .ln.error{color:var(--danger)}.tlog .ln.warn{color:var(--warn)}.tlog .ln.gm{color:var(--tk-meta)}.tlog .ln.sys{color:var(--ok);font-weight:700}
+@media (max-width:1100px){#btnTest .lbl{display:none}}
+@media (max-width:759px){#btnTest{display:none}}
+
+/* ---------- 收藏、工作區搜尋 ---------- */
+.pal-item .fav-btn{flex:none;margin:2px 0 0 4px;width:30px;height:30px;border:0;border-radius:8px;background:transparent;color:var(--muted);font-size:18px;line-height:1;cursor:pointer}
+.pal-item .fav-btn:hover{background:var(--panel)}
+.pal-item .fav-btn.on{color:#e0a800}
+#wsFind{position:absolute;left:50%;top:10px;transform:translateX(-50%);z-index:7;display:flex;align-items:center;gap:2px;width:min(460px,calc(100% - 24px));padding:4px 4px 4px 14px;background:var(--panel);border:1px solid var(--line);border-radius:999px;box-shadow:var(--shadow)}
+#wsFind[hidden]{display:none}
+#wsFind input{flex:1;min-width:0;border:0;outline:0;background:transparent;color:var(--ink);font:inherit;padding:6px 4px}
+#wsFind .cnt{flex:none;min-width:46px;padding-right:4px;text-align:right;font-size:12.5px;color:var(--muted);font-variant-numeric:tabular-nums}
+#wsFind .ibtn{flex:none;width:32px;height:32px;min-width:32px;padding:0}
+.blk.found{outline:3px solid #ffc800;outline-offset:2px}
+.blk.found-cur{outline:4px solid #ff6a00;outline-offset:2px;box-shadow:0 0 0 7px rgba(255,106,0,.28)}
+@media (max-width:759px){#wsFind input{font-size:16px}}
+
 /* ---------- 提示 ---------- */
 #toastRoot{position:fixed;left:0;right:0;top:calc(62px + env(safe-area-inset-top,0px));display:flex;flex-direction:column;align-items:center;gap:8px;z-index:4000;pointer-events:none}
 .toast{max-width:min(92vw,520px);padding:9px 16px;border-radius:999px;background:var(--ink);color:var(--panel);box-shadow:var(--shadow);font-weight:600;font-size:13.5px;animation:fadein .15s ease-out}
 
 /* ---------- 手機版 ---------- */
 @media (max-width:759px){
-  #topbar{padding:0 6px;gap:4px}
+  #topbar{padding:0 6px;gap:2px}
+  .brand{gap:2px}
+  .brand .logo{width:30px;height:30px;font-size:18px}
+  .ibtn,.tbtn{min-width:34px;height:34px;padding:0 6px}
+  .brand .ibtn{margin-left:0}
+  #btnExport{padding:6px 11px;margin-left:2px}
   .brand small,.tbtn .lbl{display:none}
   .brand span.nm{display:none}
   .tbtn{padding:0 8px}
@@ -294,16 +382,17 @@ code.i{font-family:var(--mono);font-size:12.5px;background:var(--panel2);border:
 <body>
 <div id="app">
   <header id="topbar">
-    <div class="brand"><span class="logo" aria-hidden="true">🐒</span><span class="nm">竄改猴積木</span><small>用拖拉積木做出 Tampermonkey 腳本</small></div>
+    <div class="brand"><span class="logo" aria-hidden="true">🐒</span><button class="ibtn" id="btnLang" title="語言 / Language" aria-label="語言 / Language">🌐</button><span class="nm">竄改猴積木</span><small>用拖拉積木做出 Tampermonkey 腳本</small></div>
     <div class="top-actions">
       <button class="ibtn" id="btnUndo" title="復原 (Ctrl+Z)" aria-label="復原">↶</button>
       <button class="ibtn" id="btnRedo" title="重做 (Ctrl+Y)" aria-label="重做">↷</button>
       <span class="sep"></span>
       <button class="tbtn" id="btnExamples" aria-label="範例" title="範例"><span class="ic">📚</span><span class="lbl">範例</span></button>
       <button class="tbtn" id="btnExt" aria-label="自訂積木" title="匯入 JavaScript 自訂積木"><span class="ic">🧩</span><span class="lbl">自訂積木</span></button>
+      <button class="tbtn" id="btnTest" aria-label="測試" title="試跑目前的腳本"><span class="ic">🧪</span><span class="lbl">測試</span></button>
       <button class="tbtn" id="btnMeta" aria-label="腳本設定" title="腳本設定"><span class="ic">⚙️</span><span class="lbl">腳本設定</span></button>
       <button class="tbtn" id="btnProject" aria-label="專案" title="專案"><span class="ic">📁</span><span class="lbl">專案</span></button>
-      <button class="btn primary" id="btnExport" style="gap:0"><span>匯出</span><span class="lbl2">腳本</span></button>
+      <button class="btn primary" id="btnExport"><span>匯出</span><span class="lbl2">腳本</span></button>
     </div>
   </header>
   <main id="main">
@@ -314,12 +403,20 @@ code.i{font-family:var(--mono);font-size:12.5px;background:var(--panel2);border:
     </aside>
     <section id="wsWrap" aria-label="工作區">
       <div id="ws"><div id="wsInner"></div></div>
+      <div id="wsFind" hidden>
+        <input type="search" id="findInput" placeholder="在工作區找積木（文字、網址、選擇器…）" aria-label="搜尋工作區" autocomplete="off" spellcheck="false">
+        <span id="findCount" class="cnt" aria-live="polite"></span>
+        <button class="ibtn" id="findPrev" aria-label="上一個" title="上一個 (Shift+Enter)">↑</button>
+        <button class="ibtn" id="findNext" aria-label="下一個" title="下一個 (Enter)">↓</button>
+        <button class="ibtn" id="findClose" aria-label="關閉" title="關閉 (Esc)">✕</button>
+      </div>
       <div id="emptyHint"><div class="card">
         <h3>從一個事件積木開始 🐒</h3>
         <p>每段程式都從一個「事件」積木開始，例如「當腳本啟動時」，再把其他積木接在它下面。</p>
         <div class="row"><button class="btn primary" id="hintStart">放一個「當腳本啟動時」</button><button class="btn" id="hintExamples">看範例</button></div>
       </div></div>
       <div id="wsCtl">
+        <button class="ibtn" id="btnFind" aria-label="搜尋工作區" title="搜尋工作區 (Ctrl+F)">🔍</button>
         <button class="ibtn" id="btnZoomIn" aria-label="放大" title="放大">＋</button>
         <button class="ibtn" id="btnZoomOut" aria-label="縮小" title="縮小">－</button>
         <button class="ibtn" id="btnClean" aria-label="整理積木" title="整理積木">⌗</button>
@@ -337,6 +434,7 @@ code.i{font-family:var(--mono);font-size:12.5px;background:var(--panel2);border:
       <div class="cp-foot">
         <button class="btn primary" id="btnCopy">複製程式碼</button>
         <button class="btn" id="btnDownload">下載檔案</button>
+        <button class="btn" id="btnRunTest">▶ 測試</button>
         <button class="btn flat" id="btnInstall">怎麼安裝？</button>
       </div>
     </aside>
@@ -369,7 +467,8 @@ function h(tag, attrs, ...kids) {
       if (v == null || v === false) continue;
       if (k === 'class') el.className = v;
       else if (k === 'style' && typeof v === 'object') Object.assign(el.style, v);
-      else if (k === 'text') el.textContent = v;
+      else if (k === 'text') el.textContent = tr(String(v));
+      else if (k === 'title' || k === 'aria-label' || k === 'placeholder') el.setAttribute(k, tr(String(v)));
       else if (k === 'dataset') Object.assign(el.dataset, v);
       else if (k.startsWith('on') && typeof v === 'function') el.addEventListener(k.slice(2), v);
       else el.setAttribute(k, v === true ? '' : v);
@@ -377,7 +476,7 @@ function h(tag, attrs, ...kids) {
   }
   for (const kid of kids.flat(Infinity)) {
     if (kid == null || kid === false) continue;
-    el.append(kid.nodeType ? kid : document.createTextNode(String(kid)));
+    el.append(kid.nodeType ? kid : document.createTextNode(typeof kid === 'string' ? tr(kid) : String(kid)));
   }
   return el;
 }
@@ -508,7 +607,8 @@ function openMenu(anchor, items, opt = {}) {
   items.forEach((it) => {
     if (it.sep) { menu.append(h('div', { class: 'sep' })); return; }
     if (it.header) { menu.append(h('div', { class: 'mh', text: it.header })); return; }
-    const mi = h('div', { class: 'mi' + (it.on ? ' on' : '') + (it.dim ? ' dim' : ''), role: 'menuitem', text: it.label });
+    const mi = h('div', { class: 'mi' + (it.on ? ' on' : '') + (it.dim ? ' dim' : ''), role: 'menuitem' });
+    mi.textContent = it.raw ? it.label : tr(it.label);   // raw：使用者自己的內容（變數名稱等），不翻譯
     mi.addEventListener('click', (e) => { e.stopPropagation(); closeMenu(); if (it.onPick) it.onPick(it.value); });
     menu.append(mi);
   });
@@ -600,16 +700,1166 @@ function uiConfirm({ title = '請確認', message, okText = '確定', danger = f
   });
 }
 
+'use strict';
+/* =====================================================================
+   多語系：介面文字（程式碼除外）會自動翻成使用者的語言
+   ‧ 原文是繁體中文；英文已內建（馬上就有，不需要網路）
+   ‧ 目前支援：繁體中文、English。之後要加語言，只要在 I18N.bundled 加一份翻譯表、
+     再把語言放進 LANGS 就好（翻譯表的鍵是中文原文，值是譯文，{0}、{NAME} 這類佔位符要原樣保留）
+   ===================================================================== */
+const I18N = {
+  lang: 'zh-Hant',        // 目前的介面語言
+  mode: 'auto',           // 'auto'（跟著瀏覽器）或使用者自己選的語言代碼
+  dict: null,             // 目前語言的翻譯表（原文 → 譯文）；繁體中文時是 null
+  bundled: {},            // 內建的翻譯表：{ en: {...} }
+};
+const LANGS = [
+  { code: 'zh-Hant', name: '繁體中文' },
+  { code: 'en', name: 'English' },
+];
+const CJK_RE = /[\u3000-\u303f\u3400-\u9fff\uff00-\uffef]/;
+
+/** 翻譯一個字串；沒有譯文就原樣回傳（前後的空白會保留） */
+function tr(s) {
+  const d = I18N.dict;
+  if (!d || typeof s !== 'string' || s === '') return s;
+  const hit = d[s];
+  if (hit !== undefined) return hit;
+  const t = s.trim();
+  if (t && t !== s) {
+    const h2 = d[t];
+    if (h2 !== undefined) { const i = s.indexOf(t); return s.slice(0, i) + h2 + s.slice(i + t.length); }
+  }
+  return s;
+}
+/** 帶參數的翻譯：原文裡用 {0}、{1}… 表示要填入的值 */
+function trf(template, ...args) {
+  return tr(template).replace(/\{(\d+)\}/g, (m, i) => (args[Number(i)] !== undefined ? String(args[Number(i)]) : m));
+}
+
+/* ---------- 偵測語言：中文系 → 繁體中文；其他語言 → English ---------- */
+function detectLang() {
+  const list = (navigator.languages && navigator.languages.length) ? navigator.languages : [navigator.language || 'zh-TW'];
+  for (const raw of list) {
+    const l = String(raw).toLowerCase();
+    if (l === 'zh' || l.startsWith('zh-')) return 'zh-Hant';
+    if (l === 'en' || l.startsWith('en-')) return 'en';
+  }
+  return list.length ? 'en' : 'zh-Hant';
+}
+
+/* ---------- 套用語言 ---------- */
+const i18nListeners = [];
+function onI18nChange(fn) { i18nListeners.push(fn); }
+function applyLang(code) {
+  I18N.lang = code;
+  I18N.dict = I18N.bundled[code] || null;
+  document.documentElement.lang = code;
+}
+function savedLang() { const v = storeGet('tmblocks.lang'); return v === 'zh-Hant' || v === 'en' ? v : 'auto'; }
+/** 啟動時決定語言 */
+function initLang() {
+  const saved = savedLang();
+  I18N.mode = saved;
+  applyLang(saved === 'auto' ? detectLang() : saved);
+}
+/** 使用者選語言（code 可以是 'auto'） */
+function chooseLang(code) {
+  I18N.mode = code;
+  storeSet('tmblocks.lang', code);
+  applyLang(code === 'auto' ? detectLang() : code);
+  i18nListeners.forEach((fn) => fn());
+}
+
+/* ---------- 網頁上原本就有的文字（靜態標籤）也一起翻 ---------- */
+const _staticText = new Map();   // 文字節點 → 原文
+const _staticAttr = [];          // [元素, 屬性, 原文]
+let _staticTitle = '';
+function collectStatic() {
+  const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
+  let n;
+  while ((n = walker.nextNode())) {
+    const p = n.parentElement;
+    if (!p || /^(SCRIPT|STYLE)$/.test(p.tagName)) continue;
+    if (CJK_RE.test(n.nodeValue)) _staticText.set(n, n.nodeValue);
+  }
+  $$('[title],[aria-label],[placeholder]').forEach((el) => {
+    ['title', 'aria-label', 'placeholder'].forEach((a) => { const v = el.getAttribute(a); if (v && CJK_RE.test(v)) _staticAttr.push([el, a, v]); });
+  });
+  _staticTitle = document.title;
+}
+function translateStatic() {
+  _staticText.forEach((orig, node) => { node.nodeValue = tr(orig); });
+  _staticAttr.forEach(([el, a, orig]) => el.setAttribute(a, tr(orig)));
+  if (_staticTitle) document.title = tr(_staticTitle);
+}
+
+/* =====================================================================
+   English 翻譯表（鍵是繁體中文原文，值是英文；{0}、{NAME} 這類佔位符要原樣保留）
+   ===================================================================== */
+I18N.bundled.en = Object.assign(Object.create(null), {
+"竄改猴積木": "Tampermonkey Blocks",
+"用拖拉積木做出 Tampermonkey 腳本": "Build Tampermonkey scripts by dragging blocks",
+"範例": "Examples",
+"自訂積木": "Custom blocks",
+"腳本設定": "Script settings",
+"專案": "Project",
+"匯出": "Export",
+"腳本": "script",
+"從一個事件積木開始 🐒": "Start with an event block 🐒",
+"每段程式都從一個「事件」積木開始，例如「當腳本啟動時」，再把其他積木接在它下面。": "Every script starts with an \"event\" block, such as \"When the script starts\". Then snap other blocks underneath it.",
+"放一個「當腳本啟動時」": "Add \"When the script starts\"",
+"看範例": "See examples",
+"複製": "Copy",
+"刪除": "Delete",
+"腳本程式碼": "Script code",
+"加入中文註解": "Add comments",
+"附上專案資料（可再匯入編輯）": "Include project data (so you can re-import it)",
+"複製程式碼": "Copy code",
+"下載檔案": "Download file",
+"怎麼安裝？": "How do I install it?",
+"語言 / Language": "Language",
+"復原 (Ctrl+Z)": "Undo (Ctrl+Z)",
+"復原": "Undo",
+"重做 (Ctrl+Y)": "Redo (Ctrl+Y)",
+"重做": "Redo",
+"匯入 JavaScript 自訂積木": "Import JavaScript custom blocks",
+"積木分類": "Block categories",
+"積木庫": "Block palette",
+"🔍 搜尋積木（例如：點擊、隱藏）": "🔍 Search blocks (e.g. click, hide)",
+"工作區": "Workspace",
+"放大": "Zoom in",
+"縮小": "Zoom out",
+"整理積木": "Tidy up blocks",
+"更多": "More",
+"程式碼": "Code",
+"關閉": "Close",
+"竄改猴積木編輯器": "Tampermonkey Block Editor",
+"確定": "OK",
+"取消": "Cancel",
+"請確認": "Please confirm",
+"這是給新手用的「竄改猴（Tampermonkey）腳本」積木編輯器。拖拉積木，就能做出會自動操作網頁的腳本，不用寫程式。": "This is a block editor for beginners that makes Tampermonkey userscripts. Drag and drop blocks to build scripts that operate web pages automatically, with no coding.",
+"拖出積木。": "Drag out blocks.",
+"從積木庫（電腦在左邊、手機在下方）把「事件」積木拖到工作區，再把其他積木接在它下面。手機上也可以「點一下」積木直接加入；要拖曳時請橫向滑動或長按。": "Drag an \"event\" block from the palette (on the left on a computer, at the bottom on a phone) into the workspace, then snap other blocks under it. On a phone you can also just tap a block to add it; to drag, swipe sideways or long-press.",
+"填空格。": "Fill in the blanks.",
+"圓形、六角形的積木可以拖進別的積木的空格。元素選擇器（像 #id、.class）不會寫？用「進階 → 元素選擇器工具」，點網頁上的東西就能複製。": "Round and hexagonal blocks can be dragged into the slots of other blocks. Don't know how to write an element selector (like #id or .class)? Use \"Advanced → Element picker tool\" and click anything on the page to copy it.",
+"設定網址。": "Set the website.",
+"按上方「腳本設定」，指定腳本要在哪些網站執行。": "Tap \"Script settings\" at the top to choose which websites the script runs on.",
+"匯出。": "Export.",
+"按「匯出」複製或下載程式碼，貼到竄改猴就完成了。": "Tap \"Export\" to copy or download the code, then paste it into Tampermonkey. Done!",
+"想做全自動的腳本？": "Want a fully automatic script?",
+"看「事件」的定時與監控、「控制」的等待與出錯處理、「鍵盤滑鼠」的模擬按鍵，以及「圖片按鈕」的文字找按鈕、圖片按鈕。「範例」裡有現成的組合可以參考。": "Look at the timers and monitors in \"Events\", the waiting and error handling in \"Control\", the simulated keys in \"Keyboard & mouse\", and the text-based button finding and image buttons in \"Image buttons\". The \"Examples\" have ready-made combinations to learn from.",
+"想要自己做積木？": "Want to make your own blocks?",
+"按上方「自訂積木」，可以匯入 TurboWarp 風格的 JavaScript 檔，檔案裡描述的積木會直接出現在積木庫裡。編輯器只會讀取積木的描述，不會執行你匯入的程式碼。": "Tap \"Custom blocks\" at the top to import a TurboWarp-style JavaScript file. The blocks described in the file appear right in the palette. The editor only reads the block descriptions; it never runs the code you import.",
+"小技巧：點選積木會出現下方工具列（複製／刪除）。把積木拖回積木庫就是刪除。電腦可用 Ctrl+Z 復原、Delete 刪除，在積木上按右鍵有更多選項。你的作品會自動存在這個瀏覽器裡。": "Tips: tapping a block shows a toolbar at the bottom (copy / delete). Dragging a block back to the palette deletes it. On a computer use Ctrl+Z to undo, Delete to delete, and right-click a block for more options. Your work is saved automatically in this browser.",
+"快速上手": "Quick start",
+"開始製作": "Start building",
+"事件": "Events",
+"控制": "Control",
+"動作": "Actions",
+"鍵盤滑鼠": "Keyboard & mouse",
+"文字按鈕": "Text buttons",
+"圖片按鈕": "Image buttons",
+"網頁外觀": "Page style",
+"訊息": "Messages",
+"偵測": "Sensing",
+"運算": "Operators",
+"變數": "Variables",
+"函式": "Functions",
+"網路儲存": "Network & storage",
+"進階": "Advanced",
+"每段程式都從「事件」積木開始：決定「什麼時候」要執行下面的積木。像是頁面載入、按下按鍵、元素出現、內容改變、每天定時，還可以用「廣播訊息」讓不同段程式互相呼叫。": "Every script starts with an \"event\" block: it decides WHEN the blocks below run. For example page load, a key press, an element appearing, content changing, or a daily timer. You can also use \"Broadcast message\" to let separate scripts call each other.",
+"當腳本啟動時": "When the script starts",
+"當頁面完全載入後": "When the page has fully loaded",
+"當按下 {KEY} 鍵，搭配 {MOD}": "When {KEY} key is pressed, with {MOD}",
+"空白鍵": "Space",
+"不搭配": "no modifier",
+"當點擊 {SEL} 時": "When {SEL} is clicked",
+"當 {SEL} 出現時": "When {SEL} appears",
+"每隔 {N} 秒重複執行": "Every {N} sec, repeat",
+"當網址改變時": "When the URL changes",
+"當選取文字時": "When text is selected",
+"當點選猴子選單 {NAME} 時": "When the monkey menu item {NAME} is chosen",
+"我的功能": "My feature",
+"每天 {H} 點 {M} 分執行（頁面要開著）": "Every day at {H}:{M} (page must stay open)",
+"更多事件": "More events",
+"當 {SEL} 的內容改變時": "When the content of {SEL} changes",
+"當頁面出現文字 {TEXT} 時": "When the text {TEXT} appears on the page",
+"有庫存": "in stock",
+"當 {SEL} 的輸入內容改變時": "When the input in {SEL} changes",
+"當表單 {SEL} 送出時": "When form {SEL} is submitted",
+"當這個分頁{STATE}時": "When this tab {STATE}",
+"切換到前景（看得到）": "comes to the foreground (visible)",
+"切換到背景（看不到）": "goes to the background (hidden)",
+"當捲動到頁面底部時": "When scrolled to the bottom of the page",
+"當 {SEL} 進入畫面時": "When {SEL} scrolls into view",
+"當使用者超過 {S} 秒沒有操作時": "When the user is idle for {S} sec",
+"當網路{STATE}時": "When the network {STATE}",
+"連上": "connects",
+"中斷": "disconnects",
+"當收到訊息 {NAME}": "When message {NAME} is received",
+"訊息（讓不同段程式互相呼叫）": "Messages (let separate scripts call each other)",
+"訊息1": "Message1",
+"廣播訊息 {NAME}": "Broadcast message {NAME}",
+"未知積木：{0}": "Unknown block: {0}",
+"按一下更換圖片": "Tap to change the image",
+"更換": "Change",
+"請先到「變數」分類按「建立變數」": "First go to the \"Variables\" category and tap \"Make a variable\"",
+"請先到「變數」分類按「建立清單」": "First go to the \"Variables\" category and tap \"Make a list\"",
+"請先用「定義函式」積木建立一個函式": "First create a function with the \"Define function\" block",
+"沒有可以選的項目": "Nothing to choose from",
+"🖼  從裝置選擇圖片…": "🖼  Choose an image from your device…",
+"已換成你選的圖片": "Switched to the image you chose",
+"讀不到這張圖片": "Couldn't read this image",
+"🔗  輸入圖片網址…": "🔗  Enter an image URL…",
+"圖片網址": "Image URL",
+"使用": "Use",
+"😀  輸入 Emoji 或文字…": "😀  Enter an emoji or text…",
+"Emoji 或文字": "Emoji or text",
+"要顯示在按鈕上的 Emoji 或短文字": "The emoji or short text to show on the button",
+"例如 ⬆️": "e.g. ⬆️",
+"⚠ 沒有事件積木，不會執行": "⚠ No event block, so this won't run",
+"把圓形／六角形積木拖進其他積木的空格裡，或先點選一個積木再點它": "Drag round / hexagonal blocks into the slots of other blocks, or select a block first and then tap it",
+"複製這個積木": "Duplicate this block",
+"複製這個積木和它下面的全部": "Duplicate this block and everything below it",
+"刪除這個積木": "Delete this block",
+"刪除這個積木和它下面的全部": "Delete this block and everything below it",
+"建立清單": "Make a list",
+"建立變數": "Make a variable",
+"清單名稱": "List name",
+"變數名稱": "Variable name",
+"例如：連結清單": "e.g. links",
+"例如：分數": "e.g. score",
+"建立": "Create",
+"名稱不能是空的": "The name can't be empty",
+"已經有叫「{0}」的清單了": "There's already a list named \"{0}\"",
+"已經有叫「{0}」的變數了": "There's already a variable named \"{0}\"",
+"已建立「{0}」": "Created \"{0}\"",
+"重新命名": "Rename",
+"新的名稱": "New name",
+"儲存": "Save",
+"這個名稱已經有人用了": "That name is already taken",
+"刪除「{0}」": "Delete \"{0}\"",
+"有 {0} 個積木正在使用它，刪除後這些積木也會一起移除。要繼續嗎？": "{0} blocks are using it. They will be removed too. Continue?",
+"建立函式": "Make a function",
+"函式名稱": "Function name",
+"例如：清理頁面": "e.g. cleanUp",
+"已經有叫「{0}」的函式了": "There's already a function named \"{0}\"",
+"已建立函式「{0}」，把要重複使用的積木接在它下面": "Created function \"{0}\". Snap the blocks you want to reuse under it",
+"收合或展開積木庫": "Collapse or expand the palette",
+"找不到「{0}」相關的積木。試試比較短的關鍵字，例如「點擊」或「文字」。": "No blocks found for \"{0}\". Try a shorter keyword, such as \"click\" or \"text\".",
+"💡 點一下積木就會加入；想放到指定位置，請「長按積木再拖曳」。": "💡 Tap a block to add it. To place it exactly where you want, long-press the block and then drag.",
+"關閉提示": "Dismiss hint",
+"＋ 建立變數": "+ Make a variable",
+"＋ 建立清單": "+ Make a list",
+"還沒有變數。按「建立變數」新增一個，例如「分數」。": "No variables yet. Tap \"Make a variable\" to add one, such as \"score\".",
+"重新命名 {0}": "Rename {0}",
+"刪除 {0}": "Delete {0}",
+"操作": "Actions",
+"＋ 建立函式": "+ Make a function",
+"管理自訂積木": "Manage custom blocks",
+"已刪除積木": "Block deleted",
+"等待、重複、判斷。像是「如果…那麼…」或「重複 10 次」。全自動腳本常用：等元素或文字出現、隨機等待（像真人一樣）、出錯時換個做法。": "Waiting, repeating and deciding, like \"if … then …\" or \"repeat 10 times\". Handy for fully automatic scripts: wait for an element or text, wait a random time (like a real person), and do something else when an error happens.",
+"替你操作網頁：點擊按鈕、輸入文字、捲動、換頁。「元素選擇器」就是告訴積木要操作哪個東西，例如 #id、.class。不知道怎麼寫？到「進階」拿「元素選擇器工具」，點一下網頁上的元素就能複製。": "Operate the page for you: click buttons, type text, scroll, change pages. An \"element selector\" tells a block which thing to operate, such as #id or .class. Don't know how to write one? Get the \"Element picker tool\" from \"Advanced\" and click an element on the page to copy it.",
+"模擬按鍵、輸入文字、滑鼠移動與點擊。注意：模擬出來的事件只有「網頁自己有在聽」的功能才會反應（例如快速鍵、選單、遊戲按鍵）；單純要把文字填進輸入框，用「動作 → 輸入文字」最穩。": "Simulate keys, typing, and mouse movement and clicks. Note: simulated events only affect features that the page itself is listening for (such as shortcuts, menus and game keys). To simply fill text into an input, \"Actions → Type text\" is the most reliable.",
+"在畫面上放文字按鈕，按下去就執行積木；也能隨時改它的文字、顏色、大小、形狀和位置，或把它放進網頁的某個地方。每個按鈕有一個「名稱」，用名稱找到要調整的按鈕（用「放一個文字按鈕」做出來的按鈕，名稱就是它一開始的文字）。": "Put text buttons on the screen; pressing one runs your blocks. You can change a button's text, color, size, shape and position at any time, or place it somewhere inside the page. Every button has a \"name\", and you use the name to pick the button to adjust (for a button made with \"Put a text button\", the name is its original text).",
+"在畫面上放一個圖片按鈕（可以用你自己的圖片）；也能用「文字」或「圖片」找到網頁上的按鈕再點下去，或替換、插入圖片。": "Put an image button on the screen (you can use your own picture). You can also find buttons on the page by their text or image and click them, or replace and insert images.",
+"改變網頁的樣子：隱藏廣告、換顏色、改文字、加入新內容。「嵌入網頁」可以把另一個網頁（或你自己寫的 HTML）放進目前的網頁，或做成浮動視窗、彈出視窗。有些網站禁止被嵌入，會顯示空白，這是對方網站的限制。": "Change how the page looks: hide ads, change colors, edit text, add new content. \"Embed web page\" puts another web page (or HTML you write yourself) into the current page, or shows it as a floating window or popup. Some sites forbid being embedded and show up blank; that's a restriction of that site.",
+"跟使用者說話：彈出視窗、浮動提示、桌面通知。": "Talk to the user: popup windows, floating notices, desktop notifications.",
+"讀取網頁資訊：目前網址、元素的文字、頁面上有沒有某個東西。這些圓形積木可以放進其他積木的空格。": "Read information from the page: the current URL, the text of an element, whether something is on the page. These round blocks can be dropped into the slots of other blocks.",
+"加減乘除、比較大小、處理文字。圓形和六角形的積木可以拖進其他積木的空格裡。": "Add, subtract, multiply, divide, compare numbers and work with text. Round and hexagonal blocks can be dragged into the slots of other blocks.",
+"變數像是會記住東西的盒子，例如「分數」。清單可以放很多項目。": "A variable is like a box that remembers something, such as \"score\". A list can hold many items.",
+"把一組積木包成一個函式，之後用「執行函式」重複使用。": "Wrap a group of blocks into a function, then reuse it with \"Run function\".",
+"連到網路抓資料，或把資料永久存在瀏覽器（關掉網頁也還在）。": "Fetch data from the internet, or save data permanently in the browser (it stays even after you close the page).",
+"註解、元素選擇器工具，以及直接寫 JavaScript 的積木。": "Comments, the element picker tool, and blocks for writing JavaScript directly.",
+"在畫面{POS}放一個文字按鈕 {TEXT}，按下時": "Put a text button {TEXT} at the {POS} of the screen; when pressed",
+"快速做一個按鈕": "Make a button quickly",
+"右下角": "bottom right",
+"左下角": "bottom left",
+"右上角": "top right",
+"左上角": "top left",
+"執行": "Run",
+"等待 {N} 秒": "Wait {N} sec",
+"等待直到 {COND}": "Wait until {COND}",
+"等待 {SEL} 出現（最多 {S} 秒）": "Wait for {SEL} to appear (up to {S} sec)",
+"重複 {N} 次": "Repeat {N} times",
+"重複無限次": "Repeat forever",
+"重複直到 {COND}": "Repeat until {COND}",
+"如果 {COND} 那麼": "If {COND} then",
+"否則": "Else",
+"對每個符合 {SEL} 的元素": "For each element matching {SEL}",
+"對 {LIST} 裡的每個項目": "For each item in {LIST}",
+"跳出迴圈": "Break out of the loop",
+"跳到下一圈": "Skip to the next round",
+"停止這段程式": "Stop this script",
+"目前的元素": "Current element",
+"積木裡可以用的值": "Values you can use inside blocks",
+"目前是第幾圈": "Current loop number",
+"目前的項目": "Current item",
+"點擊 {SEL}": "Click {SEL}",
+"依序點擊所有 {SEL}（每個間隔 {S} 秒）": "Click every {SEL} in turn ({S} sec apart)",
+"在 {SEL} 輸入文字 {TEXT}": "Type {TEXT} into {SEL}",
+"你好": "Hello",
+"把 {SEL} {STATE}": "Set {SEL} to {STATE}",
+"打勾": "checked",
+"取消打勾": "unchecked",
+"把下拉選單 {SEL} 選成 {VAL}": "Choose {VAL} in the dropdown {SEL}",
+"選項文字": "option text",
+"游標移到 {SEL}": "Put the cursor in {SEL}",
+"對 {SEL} 觸發 {EVT} 事件": "Trigger a {EVT} event on {SEL}",
+"滑鼠移入": "mouse over",
+"滑鼠移出": "mouse out",
+"按下滑鼠": "mouse down",
+"放開滑鼠": "mouse up",
+"雙擊": "double-click",
+"右鍵選單": "context menu",
+"內容輸入": "input",
+"內容改變": "change",
+"失去焦點": "blur",
+"送出表單 {SEL}": "Submit form {SEL}",
+"模擬按下 {KEY} 鍵": "Simulate pressing the {KEY} key",
+"捲動到頁面{WHERE}": "Scroll to the {WHERE} of the page",
+"最上方": "top",
+"最下方": "bottom",
+"捲動到 {SEL} 的位置": "Scroll to {SEL}",
+"前往網址 {URL}": "Go to URL {URL}",
+"在新分頁開啟 {URL}": "Open {URL} in a new tab",
+"重新整理頁面": "Reload the page",
+"回到上一頁": "Go back",
+"複製到剪貼簿 {TEXT}": "Copy to clipboard {TEXT}",
+"要複製的文字": "text to copy",
+"下載文字檔 {NAME} 內容 {TEXT}": "Download a text file {NAME} with content {TEXT}",
+"資料.txt": "data.txt",
+"檔案內容": "file content",
+"隱藏 {SEL}": "Hide {SEL}",
+"顯示 {SEL}": "Show {SEL}",
+"移除 {SEL}": "Remove {SEL}",
+"把 {SEL} 的 {PROP} 設為 {VAL}": "Set {PROP} of {SEL} to {VAL}",
+"背景色": "Background color",
+"文字顏色": "Text color",
+"字體大小": "Font size",
+"字體粗細": "Font weight",
+"寬度": "Width",
+"高度": "Height",
+"外距": "Margin",
+"內距": "Padding",
+"邊框": "Border",
+"圓角": "Corner radius",
+"透明度": "Opacity",
+"顯示方式": "Display",
+"定位": "Position",
+"層級": "Layer (z-index)",
+"陰影": "Shadow",
+"濾鏡": "Filter",
+"滑鼠游標": "Mouse cursor",
+"把 {SEL} 的 {WHICH} 設為 {C}": "Set {WHICH} of {SEL} to {C}",
+"邊框顏色": "Border color",
+"對 {SEL} 套用樣式 {CSS}": "Apply style {CSS} to {SEL}",
+"加入 CSS 規則 {CSS}": "Add CSS rule {CSS}",
+"把 {SEL} 的文字改成 {TEXT}": "Change the text of {SEL} to {TEXT}",
+"新的標題": "New title",
+"把 {SEL} 的 HTML 改成 {HTML}": "Change the HTML of {SEL} to {HTML}",
+"<b>你好</b>": "<b>Hello</b>",
+"把 {SEL} 的屬性 {ATTR} 設為 {VAL}": "Set attribute {ATTR} of {SEL} to {VAL}",
+"對 {SEL} {ACT} class {NAME}": "{ACT} class {NAME} on {SEL}",
+"加上": "Add",
+"移除": "Remove",
+"切換": "Toggle",
+"在 {SEL} 的{POS}加入 HTML {HTML}": "Insert HTML {HTML} {POS} {SEL}",
+"前面": "before",
+"後面": "after",
+"內部開頭": "at the start of",
+"內部結尾": "at the end of",
+"<p>新增的內容</p>": "<p>New content</p>",
+"用 {C} 框出 {SEL}": "Outline {SEL} with {C}",
+"把頁面上的文字 {FROM} 全部換成 {TO}": "Replace all text {FROM} on the page with {TO}",
+"舊文字": "old text",
+"新文字": "new text",
+"把網頁標題改成 {TEXT}": "Change the page title to {TEXT}",
+"新標題": "New title",
+"{MODE} 深色模式": "{MODE} dark mode",
+"開啟": "Turn on",
+"彈出訊息 {TEXT}": "Show a popup message {TEXT}",
+"你好！": "Hello!",
+"顯示浮動提示 {TEXT} {S} 秒": "Show a floating notice {TEXT} for {S} sec",
+"完成！": "Done!",
+"傳送桌面通知 標題 {TITLE} 內容 {TEXT}": "Send a desktop notification, title {TITLE}, text {TEXT}",
+"提醒": "Reminder",
+"該休息囉": "Time for a break",
+"在主控台輸出 {TEXT}": "Print {TEXT} to the console",
+"用 {LANG} 唸出 {TEXT}": "Say {TEXT} aloud in {LANG}",
+"中文": "Chinese",
+"英文": "English",
+"日文": "Japanese",
+"使用者按下「確定」嗎？{TEXT}": "Did the user press \"OK\"? {TEXT}",
+"要繼續嗎？": "Continue?",
+"詢問使用者 {TEXT} 預設 {DEF}": "Ask the user {TEXT} default {DEF}",
+"請輸入：": "Please enter:",
+"目前網址": "Current URL",
+"網站網域": "Site domain",
+"網頁標題": "Page title",
+"選取的文字": "Selected text",
+"{SEL} 的文字": "Text of {SEL}",
+"{SEL} 的輸入值": "Input value of {SEL}",
+"{SEL} 的屬性 {ATTR}": "Attribute {ATTR} of {SEL}",
+"{SEL} 的 HTML": "HTML of {SEL}",
+"符合 {SEL} 的元素數量": "Number of elements matching {SEL}",
+"頁面上有 {SEL}": "{SEL} is on the page",
+"{SEL} 已打勾": "{SEL} is checked",
+"頁面上有文字 {TEXT}": "The text {TEXT} is on the page",
+"登入": "Log in",
+"捲動位置 {AX}": "Scroll position {AX}",
+"垂直 (Y)": "vertical (Y)",
+"水平 (X)": "horizontal (X)",
+"視窗{WH}": "Window {WH}",
+"現在的 {PART}": "Current {PART}",
+"年": "year",
+"月": "month",
+"日": "day",
+"星期（0 是週日）": "weekday (0 is Sunday)",
+"小時": "hour",
+"分鐘": "minute",
+"秒": "second",
+"完整日期時間": "full date and time",
+"{A} ＋ {B}": "{A} + {B}",
+"{A} － {B}": "{A} - {B}",
+"{A} 除以 {B} 的餘數": "Remainder of {A} divided by {B}",
+"四捨五入 {A}": "Round {A}",
+"絕對值": "absolute value",
+"無條件捨去": "round down",
+"無條件進位": "round up",
+"平方根": "square root",
+"從 {A} 到 {B} 隨機選一個整數": "Random integer from {A} to {B}",
+"＝": "=",
+"＞": ">",
+"＜": "<",
+"{A} 而且 {B}": "{A} and {B}",
+"{A} 或者 {B}": "{A} or {B}",
+"不是 {A}": "Not {A}",
+"結合 {A} 和 {B}": "Join {A} and {B}",
+"世界": "world",
+"{A} 的字數": "Length of {A}",
+"你好世界": "Hello world",
+"{A} 的第 {N} 個字": "Letter {N} of {A}",
+"{A} 的第 {B} 到第 {C} 個字": "Letters {B} to {C} of {A}",
+"{A} 包含 {B}": "{A} contains {B}",
+"把 {A} 裡的 {B} 全部換成 {C}": "In {A}, replace every {B} with {C}",
+"把 {A} 轉成 {OP}": "Convert {A} to {OP}",
+"大寫": "uppercase",
+"小寫": "lowercase",
+"去掉前後空白": "trimmed (no spaces at the ends)",
+"在 {A} 裡找出符合 {RE} 的第一段文字": "In {A}, find the first text that matches {RE}",
+"價格 NT$1,299": "Price NT$1,299",
+"取出 {A} 裡的數字": "Extract the number from {A}",
+"把 {NAME} 設為 {V}": "Set {NAME} to {V}",
+"把 {NAME} 增加 {N}": "Change {NAME} by {N}",
+"{LIST} 的第 {N} 項": "Item {N} of {LIST}",
+"{LIST} 的項目數量": "Number of items in {LIST}",
+"把 {V} 加入 {LIST}": "Add {V} to {LIST}",
+"東西": "thing",
+"刪除 {LIST} 的第 {N} 項": "Delete item {N} of {LIST}",
+"清空 {LIST}": "Clear {LIST}",
+"{LIST} 包含 {V}": "{LIST} contains {V}",
+"把 {LIST} 用 {SEP} 連在一起": "Join {LIST} with {SEP}",
+"把 {TEXT} 用 {SEP} 切開放進 {LIST}": "Split {TEXT} by {SEP} into {LIST}",
+"定義函式 {NAME}": "Define function {NAME}",
+"我的函式": "My function",
+"執行函式 {NAME}": "Run function {NAME}",
+"取得網址 {URL} 的內容": "Get the content of URL {URL}",
+"取得網址 {URL} 的 JSON 欄位 {PATH}": "Get JSON field {PATH} from URL {URL}",
+"把 {DATA} 傳送到網址 {URL}（POST）": "Send {DATA} to URL {URL} (POST)",
+"永久儲存 {KEY} ＝ {V}": "Save permanently {KEY} = {V}",
+"分數": "score",
+"讀取永久儲存的 {KEY}（沒有的話用 {DEF}）": "Read the permanently saved {KEY} (use {DEF} if none)",
+"刪除永久儲存的 {KEY}": "Delete the permanently saved {KEY}",
+"註解 {TEXT}": "Comment {TEXT}",
+"在這裡寫下說明": "Write your notes here",
+"啟動元素選擇器工具（點網頁上的東西就能複製它的選擇器）": "Start the element picker tool (click something on the page to copy its selector)",
+"執行 JavaScript {CODE}": "Run JavaScript {CODE}",
+"JavaScript 值 {CODE}": "JavaScript value {CODE}",
+"JavaScript 條件 {CODE}": "JavaScript condition {CODE}",
+"隨機等待 {A} 到 {B} 秒": "Wait a random {A} to {B} sec",
+"更多等待": "More waiting",
+"等待頁面出現文字 {TEXT}（最多 {S} 秒）": "Wait for the text {TEXT} to appear on the page (up to {S} sec)",
+"完成": "Done",
+"等待 {SEL} 消失（最多 {S} 秒）": "Wait for {SEL} to disappear (up to {S} sec)",
+"等待網址包含 {TEXT}（最多 {S} 秒）": "Wait for the URL to contain {TEXT} (up to {S} sec)",
+"等待頁面完全載入": "Wait for the page to fully load",
+"嘗試執行": "Try to run",
+"如果出錯了": "If something goes wrong",
+"出錯處理與計時": "Error handling and timers",
+"回報錯誤 {TEXT}": "Report an error {TEXT}",
+"出錯了": "Something went wrong",
+"{S} 秒後執行（不用等它）": "Run after {S} sec (don't wait for it)",
+"只執行一次": "Run only once",
+"錯誤訊息": "Error message",
+"清空輸入框 {SEL}": "Clear the input {SEL}",
+"更多動作": "More actions",
+"往{DIR}捲動 {N} 像素": "Scroll {DIR} by {N} pixels",
+"下": "down",
+"上": "up",
+"右": "right",
+"左": "left",
+"一直往下捲到沒有新內容（最多 {N} 次，每次等 {S} 秒）": "Keep scrolling down until there's nothing new (up to {N} times, {S} sec each)",
+"前往網址 {URL}（不留上一頁紀錄）": "Go to URL {URL} (without a history entry)",
+"把網址參數 {KEY} 設為 {V} 並重新載入（留空就是移除）": "Set URL parameter {KEY} to {V} and reload (leave empty to remove)",
+"讓螢幕保持亮著": "Keep the screen awake",
+"下載網址 {URL} 的檔案，檔名 {NAME}（可留空）": "Download the file at URL {URL}, file name {NAME} (optional)",
+"下載": "Download",
+"把 {LIST} 存成文字檔 {NAME}（一行一項）": "Save {LIST} as a text file {NAME} (one item per line)",
+"清單.txt": "list.txt",
+"對影片 {SEL}：{ACT}": "For the video {SEL}: {ACT}",
+"影片與音訊": "Video & audio",
+"播放": "play",
+"暫停": "pause",
+"靜音": "mute",
+"取消靜音": "unmute",
+"全螢幕": "fullscreen",
+"重複播放": "loop",
+"把影片 {SEL} 的播放速度設為 {N} 倍": "Set the playback speed of the video {SEL} to {N}x",
+"把影片 {SEL} 跳到第 {N} 秒": "Jump the video {SEL} to second {N}",
+"在背景分頁開啟 {URL}": "Open {URL} in a background tab",
+"分頁與捲動": "Tabs & scrolling",
+"關閉這個分頁": "Close this tab",
+"開始自動往下捲動（每秒 {PX} 像素）": "Start scrolling down automatically ({PX} pixels per second)",
+"停止自動捲動": "Stop automatic scrolling",
+"模擬按下 {KEY} 鍵，搭配 {MOD}": "Simulate pressing the {KEY} key, with {MOD}",
+"鍵盤": "Keyboard",
+"在 {SEL} 上模擬按下 {KEY} 鍵，搭配 {MOD}": "On {SEL}, simulate pressing the {KEY} key, with {MOD}",
+"按住 {KEY} 鍵 {S} 秒": "Hold the {KEY} key for {S} sec",
+"{STATE} {KEY} 鍵": "{STATE} the {KEY} key",
+"按下不放": "Press and hold",
+"放開": "Release",
+"在 {SEL} 逐字輸入 {TEXT}（每字間隔 {MS} 毫秒）": "Type {TEXT} into {SEL} one character at a time ({MS} ms apart)",
+"把滑鼠移到 {SEL} 上": "Move the mouse over {SEL}",
+"滑鼠": "Mouse",
+"點擊畫面座標 X {X} Y {Y}": "Click the screen position X {X} Y {Y}",
+"雙擊 {SEL}": "Double-click {SEL}",
+"對 {SEL} 按滑鼠右鍵": "Right-click {SEL}",
+"建立文字按鈕 {NAME}，文字 {TEXT}，放在{POS}": "Create a text button {NAME} with the text {TEXT} at the {POS}",
+"建立按鈕與按下時": "Create buttons and react to presses",
+"按鈕1": "Button1",
+"按我": "Press me",
+"當文字按鈕 {NAME} 被按下時": "When the text button {NAME} is pressed",
+"按下文字按鈕 {NAME}": "Press the text button {NAME}",
+"把文字按鈕 {NAME} 的文字改成 {TEXT}": "Change the text of the text button {NAME} to {TEXT}",
+"調整按鈕": "Adjust buttons",
+"把文字按鈕 {NAME} 的{WHICH}設為 {C}": "Set the {WHICH} of the text button {NAME} to {C}",
+"把文字按鈕 {NAME} 的大小設為{SIZE}": "Set the size of the text button {NAME} to {SIZE}",
+"小": "small",
+"中": "medium",
+"大": "large",
+"特大": "extra large",
+"把文字按鈕 {NAME} 的形狀設為{SHAPE}": "Set the shape of the text button {NAME} to {SHAPE}",
+"圓形膠囊": "pill",
+"圓角方形": "rounded square",
+"方形": "square",
+"把文字按鈕 {NAME} 移到{POS}": "Move the text button {NAME} to the {POS}",
+"把文字按鈕 {NAME} 放在畫面 X {X} Y {Y}": "Place the text button {NAME} on the screen at X {X} Y {Y}",
+"把文字按鈕 {NAME} 放到 {SEL} 的{POS}": "Put the text button {NAME} {POS} {SEL}",
+"{ACT}文字按鈕 {NAME}": "{ACT} the text button {NAME}",
+"顯示": "Show",
+"隱藏": "Hide",
+"啟用": "Enable",
+"停用": "Disable",
+"設定文字按鈕 {NAME} 的提示文字為 {TEXT}": "Set the tooltip of the text button {NAME} to {TEXT}",
+"按一下會執行": "Runs when pressed",
+"對文字按鈕 {NAME} 套用樣式 {CSS}": "Apply the style {CSS} to the text button {NAME}",
+"移除所有文字按鈕": "Remove all text buttons",
+"有文字按鈕 {NAME}": "There is a text button {NAME}",
+"偵測文字按鈕": "Sense text buttons",
+"文字按鈕 {NAME} 的文字": "The text of the text button {NAME}",
+"文字按鈕 {NAME}（元素）": "The text button {NAME} (element)",
+"在畫面{POS}放一個圖片按鈕 {IMG}，大小 {SIZE}，按下時": "Put an image button {IMG} at the {POS} of the screen, size {SIZE}; when pressed",
+"圖片按鈕（放在畫面上）": "Image button (placed on the screen)",
+"點擊文字{MATCH} {TEXT} 的{KIND}": "Click the {KIND} whose text {MATCH} {TEXT}",
+"用文字找按鈕": "Find buttons by text",
+"包含": "contains",
+"完全是": "is exactly",
+"下一頁": "Next page",
+"按鈕": "button",
+"連結": "link",
+"按鈕或連結": "button or link",
+"任何元素": "any element",
+"文字{MATCH} {TEXT} 的{KIND}": "The {KIND} whose text {MATCH} {TEXT}",
+"頁面上有文字{MATCH} {TEXT} 的{KIND}": "The page has a {KIND} whose text {MATCH} {TEXT}",
+"點擊第 {N} 個 {SEL}（-1 是最後一個）": "Click the {N}th {SEL} (-1 is the last one)",
+"重複點擊 {SEL} 直到它消失（最多 {N} 次，間隔 {S} 秒）": "Keep clicking {SEL} until it disappears (up to {N} times, {S} sec apart)",
+"點擊圖片（alt、標題或網址含有 {TEXT}）": "Click the image (its alt, title or URL contains {TEXT})",
+"圖片": "Images",
+"圖片（alt、標題或網址含有 {TEXT}）": "The image (its alt, title or URL contains {TEXT})",
+"{SEL} 的圖片網址": "Image URL of {SEL}",
+"把 {SEL} 的圖片換成 {URL}": "Replace the image of {SEL} with {URL}",
+"在 {SEL} 的{POS}插入圖片 {URL}（寬度 {W}）": "Insert an image {URL} {POS} {SEL} (width {W})",
+"立刻載入所有「滑到才載入」的圖片": "Load all \"lazy-loaded\" images right away",
+"讓 {SEL} {EFFECT}": "Make {SEL} {EFFECT}",
+"變黑白": "grayscale",
+"變模糊": "blurry",
+"顏色反相": "color-inverted",
+"提高對比": "higher contrast",
+"變亮": "brighter",
+"恢復原樣": "back to normal",
+"把頁面上的文字 {TEXT} 標上 {C} 螢光筆": "Highlight the text {TEXT} on the page with the {C} marker",
+"重要": "important",
+"解除網頁禁止選取、複製、右鍵的限制": "Remove the page's restrictions on selecting, copying and right-clicking",
+"嵌入網頁 {NAME}：{SRC}，放在 {SEL} 的{POS}，寬 {W} 高 {H}": "Embed the web page {NAME}: {SRC}, put {POS} {SEL}, width {W} height {H}",
+"嵌入網頁（網址或 HTML 都可以）": "Embed a web page (a URL or HTML both work)",
+"嵌入1": "embed1",
+"在畫面{POS}放一個浮動視窗 {NAME}：{SRC}，寬 {W} 高 {H}": "Put a floating window {NAME} at the {POS} of the screen: {SRC}, width {W} height {H}",
+"螢幕中央": "center of the screen",
+"視窗1": "window1",
+"用彈出視窗顯示 {NAME}：{SRC}，寬 {W} 高 {H}（點背景或按 Esc 關閉）": "Show {NAME} in a popup: {SRC}, width {W} height {H} (click the background or press Esc to close)",
+"彈出1": "popup1",
+"把 {SEL} 換成嵌入的網頁 {NAME}：{SRC}": "Replace {SEL} with the embedded web page {NAME}: {SRC}",
+"當嵌入網頁 {NAME} 載入完成時": "When the embedded web page {NAME} has loaded",
+"把嵌入網頁 {NAME} 的內容改成 {SRC}": "Change the content of the embedded web page {NAME} to {SRC}",
+"調整嵌入的網頁": "Adjust embedded pages",
+"重新載入嵌入網頁 {NAME}": "Reload the embedded web page {NAME}",
+"把嵌入網頁 {NAME} 的大小設為 寬 {W} 高 {H}": "Set the size of the embedded web page {NAME} to width {W} height {H}",
+"把浮動視窗 {NAME} 移到{POS}": "Move the floating window {NAME} to the {POS}",
+"對嵌入網頁 {NAME} 套用樣式 {CSS}": "Apply the style {CSS} to the embedded web page {NAME}",
+"{ACT}嵌入網頁 {NAME}": "{ACT} the embedded web page {NAME}",
+"移除所有嵌入網頁": "Remove all embedded web pages",
+"有嵌入網頁 {NAME}": "There is an embedded web page {NAME}",
+"偵測嵌入的網頁": "Sense embedded pages",
+"嵌入網頁 {NAME}（元素）": "The embedded web page {NAME} (element)",
+"發出提示音（{HZ} Hz，{S} 秒）": "Beep ({HZ} Hz, {S} sec)",
+"聲音": "Sound",
+"播放音訊 {URL}（音量 {V}%）": "Play the audio {URL} (volume {V}%)",
+"網址包含 {TEXT}": "URL contains {TEXT}",
+"更多偵測": "More sensing",
+"網址參數 {KEY}": "URL parameter {KEY}",
+"{SEL} 看得見": "{SEL} is visible",
+"{SEL} 存在而且沒被停用": "{SEL} exists and isn't disabled",
+"{SEL} 的文字包含 {TEXT}": "The text of {SEL} contains {TEXT}",
+"成功": "success",
+"所有 {SEL} 的文字，用 {SEP} 連在一起": "Text of all {SEL}, joined with {SEP}",
+"第 {N} 個 {SEL} 的文字": "Text of the {N}th {SEL}",
+"{SEL} 目前的樣式 {PROP}": "Current style {PROP} of {SEL}",
+"在 {ROOT} 裡找 {SEL}": "Find {SEL} inside {ROOT}",
+"在 {ROOT} 裡找所有 {SEL}": "Find all {SEL} inside {ROOT}",
+"{SEL} 的{REL}": "The {REL} of {SEL}",
+"上一層": "parent",
+"下一個兄弟": "next sibling",
+"上一個兄弟": "previous sibling",
+"第一個子元素": "first child",
+"最後一個子元素": "last child",
+"{SEL} 往外層找最近的 {UP}": "The nearest {UP} above {SEL}",
+"已經捲到頁面底部": "Scrolled to the bottom of the page",
+"頁面已經完全載入": "The page has fully loaded",
+"這個分頁正在前景": "This tab is in the foreground",
+"目前有網路連線": "The network is connected",
+"現在時間在 {H1}:{M1} 到 {H2}:{M2} 之間": "The time is between {H1}:{M1} and {H2}:{M2}",
+"影片 {SEL} 的{PART}": "The {PART} of the video {SEL}",
+"目前播放秒數": "current time (sec)",
+"總長度（秒）": "duration (sec)",
+"播放速度": "playback speed",
+"音量（0 到 1）": "volume (0 to 1)",
+"把 {A} 用 {SEP} 切開，取第 {N} 段": "Split {A} by {SEP} and take part {N}",
+"更多文字處理": "More text tools",
+"{A} 中，{B} 和 {C} 之間的文字": "The text in {A} between {B} and {C}",
+"價格：$99 元": "Price: $99 USD",
+"{A} 開頭是 {B}": "{A} starts with {B}",
+"{A} 結尾是 {B}": "{A} ends with {B}",
+"把 {A} 保留 {N} 位小數": "Round {A} to {N} decimal places",
+"從 JSON 文字 {A} 取出 {PATH}": "From the JSON text {A}, get {PATH}",
+"把 {A} 轉成網址用的文字": "Convert {A} to URL-safe text",
+"你好 world": "hello world",
+"從 {A}（用逗號分開）隨機挑一個": "Pick one at random from {A} (comma-separated)",
+"蘋果,香蕉,橘子": "apple,banana,orange",
+"把 {LIST} 的第 {N} 項設為 {V}": "Set item {N} of {LIST} to {V}",
+"清單進階": "More list tools",
+"把每個 {SEL} 的文字存進 {LIST}": "Save the text of every {SEL} into {LIST}",
+"把每個 {SEL} 的屬性 {ATTR} 存進 {LIST}": "Save the attribute {ATTR} of every {SEL} into {LIST}",
+"移除 {LIST} 裡重複的項目": "Remove duplicate items from {LIST}",
+"把 {LIST} 排序（{ORDER}）": "Sort {LIST} ({ORDER})",
+"小到大": "small to large",
+"大到小": "large to small",
+"{LIST} 裡隨機一個項目": "A random item from {LIST}",
+"傳訊息到 {SERVICE} 的 Webhook {URL}，內容 {TEXT}": "Send a message to the {SERVICE} webhook {URL}, content {TEXT}",
+"通知（手機、群組）": "Notifications (phone, groups)",
+"純文字": "plain text",
+"https://discord.com/api/webhooks/你的網址": "https://discord.com/api/webhooks/your-url",
+"有新消息！": "New message!",
+"用 ntfy 傳手機推播：主題 {TOPIC} 標題 {TITLE} 內容 {TEXT}": "Send a phone push with ntfy: topic {TOPIC} title {TITLE} text {TEXT}",
+"寫入網頁的 localStorage：{KEY} ＝ {V}": "Write to the page's localStorage: {KEY} = {V}",
+"網頁自己的儲存空間": "The page's own storage",
+"讀取網頁的 localStorage {KEY}": "Read the page's localStorage {KEY}",
+"Cookie {NAME} 的值": "Value of cookie {NAME}",
+"設定 Cookie {NAME} ＝ {V}（保留 {D} 天）": "Set cookie {NAME} = {V} (keep for {D} days)",
+"「跳出迴圈」必須放在重複類的積木裡面": "\"Break out of the loop\" must be placed inside a repeating block",
+"（「跳出迴圈」要放在迴圈裡）": "(\"Break out of the loop\" belongs inside a loop)",
+"「跳到下一圈」必須放在重複類的積木裡面": "\"Skip to the next round\" must be placed inside a repeating block",
+"（「跳到下一圈」要放在迴圈裡）": "(\"Skip to the next round\" belongs inside a loop)",
+"「目前的元素」只能放在「對每個元素」、「當點擊」或「當…出現時」裡面": "\"Current element\" can only be used inside \"For each element\", \"When clicked\" or \"When … appears\"",
+"「目前是第幾圈」只能放在「重複 N 次」裡面": "\"Current loop number\" can only be used inside \"Repeat N times\"",
+"「目前的項目」只能放在「對清單的每個項目」裡面": "\"Current item\" can only be used inside \"For each item in a list\"",
+"找不到名為「{0}」的函式": "There is no function named \"{0}\"",
+"（找不到函式 {0}）": "(function {0} not found)",
+"// （空的 JavaScript 積木）": "// (empty JavaScript block)",
+"「錯誤訊息」只能放在「如果出錯了」裡面": "\"Error message\" can only be used inside \"If something goes wrong\"",
+"我的腳本": "My script",
+"用「竄改猴積木編輯器」製作的腳本": "Made with the Tampermonkey Block Editor",
+"選擇變數": "Choose a variable",
+"選擇清單": "Choose a list",
+"選擇函式": "Choose a function",
+"？": "?",
+"有積木用到已經刪除的清單": "A block uses a list that has been deleted",
+"有積木用到已經刪除的變數": "A block uses a variable that has been deleted",
+"有未知的積木被略過": "An unknown block was skipped",
+"「{0}」的條件還沒放入": "The condition of \"{0}\" is empty",
+"未命名腳本": "Untitled script",
+"// ===== 擴充積木：{0} =====": "// ===== Extension blocks: {0} =====",
+"這是積木編輯器的專案資料，請勿修改。可在編輯器「專案 → 開啟」重新匯入這個腳本。": "This is the block editor's project data. Please don't edit it. You can re-import this script in the editor with \"Project → Open\".",
+"{0} 組積木沒有接在事件積木下面，不會被匯出": "{0} group(s) of blocks aren't attached to an event block and won't be exported",
+"有 {0} 個函式都叫「{1}」，只有第一個會生效": "{0} functions are all named \"{1}\"; only the first one takes effect",
+"找不到擴充積木「{0}」的程式碼": "Can't find the code for the extension \"{0}\"",
+"// ===== 工具函式（積木會用到的）=====": "// ===== Helper functions (used by the blocks) =====",
+"// ===== 變數與清單 =====": "// ===== Variables and lists =====",
+"// ===== 函式 =====": "// ===== Functions =====",
+"// ===== 腳本 =====": "// ===== Scripts =====",
+"// （還沒有任何事件積木。請從「事件」分類拖一個積木到工作區）": "// (There are no event blocks yet. Drag one from the \"Events\" category into the workspace.)",
+"// （匯出時會在檔案最後附上專案資料，之後可以用「專案 → 開啟」把這個腳本重新匯入編輯）": "// (When you export, the project data is added at the end of the file, so you can re-import this script later with \"Project → Open\".)",
+"還沒有設定「套用網址」，已先用所有網站（*://*/*）": "No \"Match URLs\" are set, so all sites (*://*/*) are used for now",
+"產生的程式碼有語法錯誤（{0}）。請檢查自訂的 JavaScript 積木或擴充積木。": "The generated code has a syntax error ({0}). Please check your custom JavaScript blocks or extension blocks.",
+"產生的程式碼有語法錯誤": "The generated code has a syntax error",
+"已複製！接著到竄改猴貼上就能用了": "Copied! Now paste it into Tampermonkey.",
+"自動複製失敗：已幫你選取程式碼，請長按或按 Ctrl+C 複製": "Couldn't copy automatically: the code is selected for you. Long-press or press Ctrl+C to copy.",
+"已儲存為 {0}。安裝前請把結尾的 .txt 拿掉，或打開檔案後複製貼上": "Saved as {0}. Before installing, remove the trailing .txt, or open the file and copy-paste.",
+"已下載 {0}": "Downloaded {0}",
+"已取消下載": "Download canceled",
+"這裡無法下載檔案，請改用「複製程式碼」": "Files can't be downloaded here. Please use \"Copy code\" instead.",
+"安裝竄改猴。": "Install Tampermonkey.",
+"在瀏覽器的擴充功能商店搜尋「Tampermonkey」並安裝（Chrome、Edge、Firefox、Safari 都有）。": "Search for \"Tampermonkey\" in your browser's extension store and install it (available for Chrome, Edge, Firefox and Safari).",
+"複製程式碼。": "Copy the code.",
+"在這裡按「複製程式碼」。": "Tap \"Copy code\" here.",
+"新增腳本。": "Add a new script.",
+"點瀏覽器工具列的竄改猴圖示 →「新增腳本」，刪掉編輯器裡原本的內容，貼上，再按 Ctrl+S（或「檔案 → 儲存」）。": "Click the Tampermonkey icon in the browser toolbar → \"Create a new script\", delete what's in the editor, paste, then press Ctrl+S (or \"File → Save\").",
+"打開網站試試看。": "Try it on the website.",
+"前往你在「腳本設定」指定的網站，腳本就會自動執行。": "Go to the website you set in \"Script settings\", and the script runs automatically.",
+"如果你下載的是檔案：檔名結尾是 .user.js 的檔案，用已安裝竄改猴的瀏覽器開啟，就會跳出安裝畫面。": "If you downloaded a file: open a file ending in .user.js in a browser that has Tampermonkey installed, and an install page will appear.",
+"手機也能用：Android 可以用 Firefox 安裝竄改猴；iPhone 可以在 Safari 使用 Tampermonkey 或 Userscripts 擴充功能。": "It works on phones too: on Android, install Tampermonkey in Firefox; on iPhone, use the Tampermonkey or Userscripts extension in Safari.",
+"怎麼安裝到竄改猴？": "How do I install it in Tampermonkey?",
+"知道了": "Got it",
+"讀不到這個檔案": "Couldn't read this file",
+"這不是可以使用的圖片": "This isn't a usable image",
+"套用網址（腳本要在哪些網站執行）": "Match URLs (which sites the script runs on)",
+"一行寫一個。* 代表任意文字，例如 https://www.youtube.com/* 代表 YouTube 的所有頁面。": "One per line. * means any text; for example https://www.youtube.com/* means every YouTube page.",
+"所有網站": "All sites",
+"維基百科": "Wikipedia",
+"排除網址（選填）": "Exclude URLs (optional)",
+"符合這些網址的頁面不會執行腳本。": "The script won't run on pages that match these URLs.",
+"頁面載入完成後（預設，最穩定）": "After the page has loaded (default, most reliable)",
+"DOM 準備好時": "When the DOM is ready",
+"越早越好（頁面還沒畫出來）": "As early as possible (before the page is drawn)",
+"出現 body 時": "When the body appears",
+"額外的權限 @grant（進階）": "Extra permissions @grant (advanced)",
+"用到的積木會自動加入需要的權限，一般不用填。": "The blocks you use add the permissions they need automatically, so you normally don't need to fill this in.",
+"載入外部函式庫 @require（進階）": "Load external libraries @require (advanced)",
+"一行一個網址。": "One URL per line.",
+"輸入 Emoji（例如 🐒）或圖片網址": "Enter an emoji (e.g. 🐒) or an image URL",
+"選擇圖片…": "Choose image…",
+"清除": "Clear",
+"（已選擇的圖片）": "(image chosen)",
+"腳本圖示（選填）": "Script icon (optional)",
+"會顯示在竄改猴的腳本清單裡。可以輸入 Emoji、圖片網址，或從裝置選一張圖片。": "Shown in Tampermonkey's script list. You can enter an emoji, an image URL, or choose an image from your device.",
+"腳本名稱": "Script name",
+"說明": "Description",
+"這個腳本做什麼用？": "What does this script do?",
+"作者": "Author",
+"版本": "Version",
+"執行時機": "Run at",
+"只在最上層頁面執行（不在網頁內嵌的小框架裡執行）": "Only run in the top-level page (not in frames embedded in the page)",
+"進階設定": "Advanced settings",
+"載入": "Load",
+"載入範例": "Load an example",
+"目前工作區的積木會被取代。要繼續嗎？": "The blocks in the workspace will be replaced. Continue?",
+"載入範例後，可以看看積木怎麼組合，再改成自己想要的。": "After loading an example, look at how the blocks fit together, then change it into what you want.",
+"已載入「{0}」": "Loaded \"{0}\"",
+"自動（跟隨瀏覽器）": "Automatic (follow the browser)",
+"繁體中文": "繁體中文",
+"新增專案": "New project",
+"目前的積木會被清空（可以用「復原」找回）。要繼續嗎？": "The current blocks will be cleared (you can bring them back with \"Undo\"). Continue?",
+"清空並新增": "Clear and start new",
+"找不到專案資料。只有用這個編輯器匯出的腳本（有附上專案資料）或專案檔可以重新開啟": "No project data found. Only scripts exported from this editor (with project data included) or project files can be reopened.",
+"開啟專案": "Open project",
+"已開啟，但有 {0} 個項目無法還原": "Opened, but {0} item(s) couldn't be restored",
+"已開啟「{0}」": "Opened \"{0}\"",
+"已儲存專案檔 {0}": "Saved the project file {0}",
+"已取消": "Canceled",
+"這裡無法下載檔案。「匯出」的程式碼最後有附專案資料，可以用它重新開啟": "Files can't be downloaded here. The exported code ends with the project data, so you can reopen it from there.",
+"開啟專案檔或匯出的腳本…": "Open a project file or exported script…",
+"儲存專案檔（.json）": "Save project file (.json)",
+"整理積木位置": "Tidy up block positions",
+"快速上手說明": "Quick start guide",
+"外觀": "Appearance",
+"自動（跟隨系統）": "Automatic (follow the system)",
+"淺色": "Light",
+"深色": "Dark",
+"把 TurboWarp 風格的擴充 JavaScript 貼在這裡…": "Paste the extension JavaScript (TurboWarp style) here…",
+"還沒有自訂積木。從下面匯入一個 JavaScript 檔，或先載入範例看看。": "No custom blocks yet. Import a JavaScript file below, or load an example first.",
+"{0} 個積木・工作區用了 {1} 個": "{0} blocks · {1} used in the workspace",
+"{0} 個積木": "{0} blocks",
+"編輯程式碼": "Edit code",
+"移除「{0}」": "Remove \"{0}\"",
+"工作區有 {0} 個這個擴充的積木，移除後也會一併刪除。要繼續嗎？": "The workspace has {0} block(s) from this extension. Removing it deletes them too. Continue?",
+"加入積木": "Add blocks",
+"請先貼上或選擇一個 JavaScript 檔。": "Paste or choose a JavaScript file first.",
+"已更新「{0}」：{1} 個積木": "Updated \"{0}\": {1} blocks",
+"已加入「{0}」：{1} 個積木": "Added \"{0}\": {1} blocks",
+"無法加入：{0}": "Couldn't add: {0}",
+"{0}。按「加入積木」就會出現在積木庫。": "{0}. Tap \"Add blocks\" and they will appear in the palette.",
+"選擇 .js 檔案": "Choose a .js file",
+"已讀取「{0}」。確認內容後按「加入積木」。": "Read \"{0}\". Check the content, then tap \"Add blocks\".",
+"指令（做一件事）": "Command (does something)",
+"數值（回傳一個值）": "Reporter (returns a value)",
+"條件（回傳 是／否）": "Condition (returns yes / no)",
+"我的積木": "My blocks",
+"把 [文字] 加上驚嘆號": "Add an exclamation mark to [text]",
+"產生範本程式碼": "Generate template code",
+"範本已產生在上方。把 myBlock 方法裡的程式改成你要的功能，再按「加入積木」。": "The template is above. Change the code in the myBlock method to do what you want, then tap \"Add blocks\".",
+"沒有 JavaScript 檔？用表單產生範本": "No JavaScript file? Generate a template from a form",
+"分類名稱": "Category name",
+"積木類型": "Block type",
+"積木上的文字": "Text on the block",
+"用 [方括號] 標出要讓使用者填的空格，例如「把 [文字] 重複 [次數] 次」。": "Mark the blanks users fill in with [square brackets], e.g. \"Repeat [text] [times] times\".",
+"寫法說明（相容 TurboWarp 擴充）": "How to write one (compatible with TurboWarp extensions)",
+"擴充是一個 class：": "An extension is a class:",
+"回傳 id、name 和 blocks 清單，描述有哪些積木（opcode、blockType、text、arguments）。": "returns the id, name and blocks list that describe which blocks exist (opcode, blockType, text, arguments).",
+"‧ 每個 opcode 對應一個同名方法，積木被執行時會收到": "• Each opcode corresponds to a method with the same name. When a block runs, the method receives",
+"，指令積木不用回傳，數值／條件積木要 return。": ", and command blocks don't need to return anything, while reporter and boolean blocks must return a value.",
+"‧ 最後呼叫": "• Finally, call",
+"Scratch.extensions.register(new 你的類別())": "Scratch.extensions.register(new YourClass())",
+"。": ".",
+"‧ 支援三種積木：COMMAND、REPORTER、BOOLEAN，參數可用 STRING、NUMBER、BOOLEAN、COLOR，也支援下拉選單（menus）。": "• Three kinds of blocks are supported: COMMAND, REPORTER and BOOLEAN. Arguments can be STRING, NUMBER, BOOLEAN or COLOR, and dropdown menus (menus) are supported too.",
+"匯出時，你的程式碼會完整放進腳本，在網頁上執行，所以可以直接用": "When exported, your code is placed in the script as-is and runs on the web page, so you can directly use",
+"、": ", ",
+"等瀏覽器功能。編輯器本身不會執行它，只會讀取 getInfo() 裡的積木描述，所以 getInfo() 請直接寫出文字和數字。": "and other browser features. The editor itself never runs it; it only reads the block descriptions in getInfo(), so write plain text and numbers directly in getInfo().",
+"像 TurboWarp 一樣，匯入一段 JavaScript，裡面描述的積木就會出現在積木庫裡，讓你自由組合。匯出的腳本會包含這段程式，請只匯入你信任的程式碼。": "Like TurboWarp, import a piece of JavaScript and the blocks it describes appear in the palette for you to combine freely. The exported script includes this code, so only import code you trust.",
+"已加入的自訂積木": "Custom blocks you've added",
+"匯入 JavaScript": "Import JavaScript",
+"或載入範例：": "Or load an example:",
+"（約在第 {0} 行）": "(around line {0})",
+"文字沒有結尾": "The text is not closed",
+"不支援在文字中使用 ${ }，請改成一般的文字": "Using ${ } inside text is not supported; please use plain text",
+"括號沒有成對": "The brackets don't match",
+"無法解析「{0}」。積木描述裡請直接寫出文字或數字": "Can't parse \"{0}\". In the block description, write plain text or numbers directly",
+"無法解析「{0}」": "Can't parse \"{0}\"",
+"缺少 )": "Missing )",
+"不支援呼叫 {0}()，積木描述裡請直接寫出文字或數字": "Calling {0}() is not supported. In the block description, write plain text or numbers directly",
+"程式碼在這裡突然結束": "The code ends unexpectedly here",
+"無法解析數字": "Can't parse the number",
+"不支援的寫法：{0}": "Unsupported syntax: {0}",
+"不支援展開運算子 ...": "The spread operator ... is not supported",
+"缺少 ]": "Missing ]",
+"物件格式不正確": "The object format is incorrect",
+"找不到變數「{0}」的內容": "Can't find the value of the variable \"{0}\"",
+"陣列格式不正確": "The array format is incorrect",
+"在方法裡找不到 return": "Can't find a return in the method",
+"找不到 Scratch.extensions.register(…)。擴充程式最後需要呼叫它來註冊。": "Can't find Scratch.extensions.register(…). The extension must call it at the end to register itself.",
+"找不到 getInfo() 方法。擴充需要用 getInfo() 描述有哪些積木。": "Can't find a getInfo() method. An extension needs getInfo() to describe its blocks.",
+"無法讀取 getInfo() 裡的積木描述：{0}\n\n提示：getInfo() 最好直接 return 一個寫明文字與數字的物件（TurboWarp 官方範例的寫法）。": "Can't read the block description in getInfo(): {0}\n\nTip: it's best for getInfo() to return an object that spells out the text and numbers directly (the style of the official TurboWarp examples).",
+"getInfo() 必須回傳一個物件。": "getInfo() must return an object.",
+"getInfo() 裡需要有 id（例如 id: 'myblocks'）。": "getInfo() needs an id (for example id: 'myblocks').",
+"略過「{0}」：暫不支援 {1} 類型的積木": "Skipped \"{0}\": blocks of type {1} aren't supported yet",
+"未知": "unknown",
+"「{0}」找不到對應的方法，匯出後執行這個積木會出錯": "No matching method for \"{0}\", so this block will fail when the exported script runs",
+"這個擴充裡沒有可以用的積木（支援指令、數值、條件三種類型）。": "This extension has no usable blocks (command, reporter and boolean types are supported).",
+"自訂積木（來自你匯入的 JavaScript）。": "Custom blocks (from the JavaScript you imported).",
+"文字小工具": "Text tools",
+"重複文字、反轉文字、隨機挑選、判斷是不是 Email": "Repeat text, reverse text, pick at random, check whether it's an email",
+"網頁小幫手": "Page helper",
+"放大文字、讓元素閃爍、計算頁面字數（會操作網頁）": "Enlarge text, make elements blink, count the words on the page (operates the page)",
+"日期小工具": "Date tools",
+"今天是幾月幾號、距離某天還有幾天": "What's today's date, and how many days until a given day",
+"在這裡寫下積木要做的事。args.{0} 就是使用者填入的值": "Write what the block should do here. args.{0} is the value the user filled in",
+"參數": "parameter",
+"回傳 true（成立）或 false（不成立）": "Return true (yes) or false (no)",
+"回傳這個積木的結果": "Return the result of this block",
+"{0} — 自訂積木範本（寫法相容 TurboWarp 擴充）": "{0} — custom block template (compatible with TurboWarp extensions)",
+"方法名稱要跟上面的 opcode 一樣": "The method name must match the opcode above",
+"隱藏廣告與彈出視窗": "Hide ads and popups",
+"一開始就隱藏常見的廣告區塊；之後只要出現遮罩視窗，就自動移除。": "Hides common ad blocks right away; afterwards, any overlay window that appears is removed automatically.",
+"隱藏常見的廣告區塊，並移除擋住畫面的遮罩視窗": "Hides common ad blocks and removes overlay windows that block the page",
+"把下面的選擇器換成你想隱藏的東西": "Replace the selectors below with what you want to hide",
+"廣告已隱藏": "Ads hidden",
+"自動按下「同意 Cookie」": "Auto-click \"Accept cookies\"",
+"當同意按鈕出現時，等半秒自動點下去，並顯示提示。": "When the accept button appears, wait half a second, click it automatically and show a notice.",
+"自動同意 Cookie": "Auto-accept cookies",
+"自動點掉網站的 Cookie 同意橫幅": "Automatically clicks away a site's cookie consent banner",
+"已自動同意 Cookie": "Cookies accepted automatically",
+"深色模式按鈕": "Dark mode button",
+"在畫面右下角放一個按鈕，按一下切換整頁的深色模式。": "Puts a button at the bottom right of the screen; click it to toggle dark mode for the whole page.",
+"在網頁右下角加入深色模式開關": "Adds a dark mode switch at the bottom right of the page",
+"🌙 深色模式": "🌙 Dark mode",
+"按 Ctrl+Shift+L 複製所有連結": "Copy all links with Ctrl+Shift+L",
+"用到清單、迴圈與剪貼簿：把頁面上每個連結的網址收集起來，一次複製。": "Uses a list, a loop and the clipboard: collects the URL of every link on the page and copies them all at once.",
+"複製頁面所有連結": "Copy all links on the page",
+"按 Ctrl+Shift+L，複製這個頁面上所有連結的網址": "Press Ctrl+Shift+L to copy the URLs of all links on this page",
+"連結清單": "links",
+"已複製": "Copied",
+"個連結": "links",
+"選取文字後按 Alt+S 搜尋": "Search the selected text with Alt+S",
+"選取網頁上的文字，按 Alt+S，就用 Google 搜尋它。": "Select text on a page and press Alt+S to search it on Google.",
+"選取文字快速搜尋": "Quick search for selected text",
+"選取文字後按 Alt+S，用 Google 搜尋": "Select text and press Alt+S to search it on Google",
+"每 30 秒自動重新整理並計次": "Reload every 30 seconds and count",
+"用到變數與「永久儲存」：就算重新整理，次數也不會歸零。": "Uses a variable and \"Save permanently\": the count doesn't reset even after reloading.",
+"自動重新整理": "Auto reload",
+"每 30 秒重新整理頁面，並記錄已經重新整理幾次": "Reloads the page every 30 seconds and counts how many times it has reloaded",
+"次數": "count",
+"已自動重新整理": "Auto-reload count:",
+"解除網頁禁止複製、選取、右鍵": "Unlock copying, selecting and right-click",
+"有些網站不讓你選取文字或按右鍵，這個腳本一開始就把限制拿掉。": "Some sites don't let you select text or right-click. This script removes those restrictions right away.",
+"解除複製限制": "Unlock copying",
+"已解除複製限制": "Copy restrictions removed",
+"圖片按鈕：一鍵回到頂端": "Image button: back to top in one tap",
+"在畫面右下角放一個圖片按鈕（可以換成你自己的圖片），按下就平滑捲回頁面最上方。": "Puts an image button at the bottom right of the screen (you can swap in your own picture); pressing it scrolls smoothly back to the top of the page.",
+"回到頂端按鈕": "Back-to-top button",
+"在畫面右下角加入一個圖片按鈕，按下回到頁面最上方": "Adds an image button at the bottom right of the screen that returns to the top of the page",
+"每天 9:00 自動按下「簽到」": "Press \"Check in\" automatically every day at 9:00",
+"用文字找到按鈕再點下去；每天到時間就自動執行（簽到頁面要開著）。": "Finds the button by its text and clicks it; runs automatically at the set time every day (the check-in page must stay open).",
+"每日自動簽到": "Daily auto check-in",
+"每天 9:00 自動按下頁面上的「簽到」按鈕": "Automatically presses the \"Check in\" button on the page every day at 9:00",
+"請把這個分頁開在簽到頁面": "Keep this tab open on the check-in page",
+"簽到": "Check in",
+"已經幫你按下簽到按鈕": "The check-in button has been pressed for you",
+"自動載入全部內容": "Load all content automatically",
+"等頁面載入完，一直按「載入更多」直到消失，再往下捲到沒有新內容為止。": "After the page loads, keeps pressing \"Load more\" until it disappears, then scrolls down until nothing new appears.",
+"自動按「載入更多」並一直捲到底": "Automatically presses \"Load more\" and scrolls all the way down",
+"全部載入完成": "Everything is loaded",
+"影片倍速快速鍵（按 ] 加速、按 [ 減速）": "Video speed shortcuts (] to speed up, [ to slow down)",
+"讀取影片目前的速度，加或減 0.25 倍，並顯示提示。": "Reads the video's current speed, adds or subtracts 0.25x, and shows a notice.",
+"影片倍速快速鍵": "Video speed shortcuts",
+"按 ] 加快影片、按 [ 放慢影片": "Press ] to speed up the video, [ to slow it down",
+"有庫存就響鈴通知（監控頁面）": "Beep when it's back in stock (monitor a page)",
+"頁面沒有「有庫存」就隨機等 25 到 35 秒再重新整理；出現了就響鈴並傳通知。": "If the page doesn't show \"in stock\", waits a random 25 to 35 seconds and reloads; when it appears, it beeps and sends a notification.",
+"庫存監控": "Stock monitor",
+"監控頁面上有沒有「有庫存」，有就響鈴通知": "Watches the page for \"in stock\" and beeps when it appears",
+"有庫存了！": "Back in stock!",
+"快去看看": "Go take a look",
+"收集商品價格，存成文字檔": "Collect product prices into a text file",
+"按 Ctrl+Shift+P，把所有 .price 元素的文字收集成清單，存成檔案下載。": "Press Ctrl+Shift+P to collect the text of all .price elements into a list and download it as a file.",
+"收集價格": "Collect prices",
+"按 Ctrl+Shift+P，把頁面上所有價格存成文字檔": "Press Ctrl+Shift+P to save all prices on the page as a text file",
+"價格清單": "prices",
+"價格.txt": "prices.txt",
+"已儲存": "Saved",
+"計數按鈕（建立並調整文字按鈕）": "Counter button (create and adjust a text button)",
+"在畫面右下角建立一個文字按鈕；每按一下就把次數加一並改按鈕的文字，按滿 5 次按鈕會變成紅色、變大。": "Creates a text button at the bottom right of the screen. Each press adds one to the count and changes the button's text; after 5 presses the button turns red and gets bigger.",
+"計數按鈕": "Counter button",
+"建立一個會計數、還會變色的文字按鈕": "Creates a text button that counts and even changes color",
+"計數": "counter",
+"點擊次數：0": "Clicks: 0",
+"按一下加一": "Press to add one",
+"點擊次數：": "Clicks: ",
+"浮動說明視窗（按 Alt+H 開關）": "Floating help window (Alt+H toggles it)",
+"用「嵌入網頁」放一個可以拖曳、縮小的浮動視窗，內容是自己寫的 HTML；再按一次 Alt+H 就關掉。": "Uses \"Embed web page\" to put up a floating window you can drag and minimize, with HTML you wrote yourself; press Alt+H again to close it.",
+"<div style=\"font:14px system-ui,sans-serif;padding:12px\"><b>快速鍵說明</b><ul style=\"padding-left:18px;margin:8px 0 0\"><li>Alt + H：開關這個視窗</li><li>Alt + S：搜尋選取的文字</li></ul></div>": "<div style=\"font:14px system-ui,sans-serif;padding:12px\"><b>Keyboard shortcuts</b><ul style=\"padding-left:18px;margin:8px 0 0\"><li>Alt + H: show or hide this window</li><li>Alt + S: search the selected text</li></ul></div>",
+"浮動說明視窗": "Floating help window",
+"按 Alt+H 開關一個浮動的快速鍵說明視窗": "Press Alt+H to show or hide a floating keyboard-shortcut help window",
+"快速鍵說明": "Shortcut help",
+"用彈出視窗看影片（按 Alt+V）": "Watch a video in a popup (Alt+V)",
+"把 YouTube 的一般連結貼進去就會自動換成可以嵌入的網址；背景變暗，點背景或按 Esc 關閉。": "Paste a normal YouTube link and it is converted to an embeddable URL automatically; the background dims, and clicking it or pressing Esc closes the popup.",
+"彈出視窗看影片": "Video in a popup",
+"按 Alt+V，用彈出視窗播放影片": "Press Alt+V to play a video in a popup",
+"影片": "video",
+"把廣告換成自己的提示（嵌入 HTML）": "Replace an ad with your own note (embedded HTML)",
+"把 .ad 這個區塊換成一個嵌入的小頁面，大小會和原本的廣告一樣。": "Replaces the .ad block with a small embedded page of the same size as the original ad.",
+"廣告換成提示": "Ad replaced with a note",
+"把廣告區塊換成自己寫的提示小頁面": "Replaces the ad block with a small note page you wrote",
+"廣告提示": "ad note",
+"<div style=\"font:16px system-ui,sans-serif;display:grid;place-items:center;height:100vh;background:#fff3bf;color:#5f3b00\">這裡原本是廣告</div>": "<div style=\"font:16px system-ui,sans-serif;display:grid;place-items:center;height:100vh;background:#fff3bf;color:#5f3b00\">There used to be an ad here</div>",
+"畫面下方的浮動提示": "A floating notice at the bottom of the screen",
+"元素出現時（包含之後才動態出現的）執行一次": "Runs once when an element appears (including elements that show up later)",
+"等到元素出現（最多等 timeout 秒），回傳該元素，逾時回傳 null": "Waits for the element to appear (up to timeout seconds), returns the element, or null on timeout",
+"偵測網址變化（單頁式網站換頁時網址會變，但頁面不會重新載入）": "Detects URL changes (on single-page sites the URL changes without the page reloading)",
+"使用者選取文字之後執行": "Runs after the user selects text",
+"使用者是不是正在輸入框裡打字（打字時不要觸發快速鍵）": "Is the user typing in an input? (don't trigger shortcuts while typing)",
+"在輸入框填入文字（會通知網頁，React / Vue 等網站也能收到）": "Fill text into an input (and notify the page, so React / Vue sites receive it too)",
+"選擇下拉選單的選項（可以用選項文字或選項值）": "Choose an option in a dropdown (by option text or option value)",
+"找不到表單：": "Form not found:",
+"把文字存成檔案下載": "Save text as a downloaded file",
+"用 GM_xmlhttpRequest 抓資料（可以跨網站，不受 CORS 限制）": "Fetch data with GM_xmlhttpRequest (works across sites, not limited by CORS)",
+"無法取得": "Couldn't fetch",
+"連線逾時：": "Connection timed out:",
+"無法傳送到": "Couldn't send to",
+"從文字中取出第一個數字，例如 \"NT$1,299.5\" → 1299.5": "Extract the first number from text, e.g. \"NT$1,299.5\" → 1299.5",
+"找不到要點擊的元素：": "Couldn't find the element to click:",
+"把頁面上所有的文字 from 換成 to（只改文字，不動網頁結構）": "Replace all text \"from\" on the page with \"to\" (text only; the page structure is untouched)",
+"簡易深色模式：整頁反相，圖片再反相回來": "Simple dark mode: invert the whole page, then invert images back",
+"元素選擇器工具：滑鼠移到元素上會框起來，點一下就複製它的選擇器": "Element picker tool: hovering highlights an element, and a click copies its selector",
+"略過": "ignore",
+"元素選擇器已啟動：請點選想要的元素（按 Esc 取消）": "Element picker started: click the element you want (press Esc to cancel)",
+"已複製選擇器：": "Selector copied:",
+"[元素選擇器]": "[Element picker]",
+"已取消元素選擇器": "Element picker canceled",
+"取得單一元素：可以傳入選擇器文字、元素，或元素陣列": "Get a single element: you can pass a selector string, an element, or an array of elements",
+"無效的選擇器：": "Invalid selector:",
+"取得所有符合的元素（陣列）": "Get all matching elements (as an array)",
+"元素現在看得到嗎（有大小、沒被隱藏）": "Is the element visible right now (has a size and isn't hidden)?",
+"元素存在、而且沒有被停用": "The element exists and isn't disabled",
+"每個符合元素的文字（陣列）": "The text of each matching element (array)",
+"每個符合元素的某個屬性（陣列）。href / src 會轉成完整網址": "One attribute of each matching element (array). href / src become full URLs",
+"在某個元素裡面找東西": "Find something inside an element",
+"找相鄰的元素：上一層、下一個兄弟、上一個兄弟、第一個／最後一個子元素": "Find nearby elements: parent, next sibling, previous sibling, first / last child",
+"現在的時間是否在兩個時間點之間（可以跨午夜）": "Is the current time between two times? (can cross midnight)",
+"在 a 和 b 之間隨機取一個小數": "A random decimal between a and b",
+"取出 start 和 end 之間的文字": "Extract the text between start and end",
+"依路徑取出物件裡的值，例如 data.items.0.name": "Get a value from an object by path, e.g. data.items.0.name",
+"從 JSON 文字裡取出某個欄位，格式不對就回傳空字串": "Get a field from JSON text; returns an empty string if the format is wrong",
+"取得網址的 JSON，並依路徑（例如 data.items.0.name）取出欄位": "Fetch the JSON at a URL and get a field by path (e.g. data.items.0.name)",
+"從「a,b,c」這樣用逗號分開的文字裡隨機挑一個": "Pick one at random from comma-separated text such as \"a,b,c\"",
+"清單排序：都是數字就照數字大小，否則照文字順序": "Sort a list: numerically if all are numbers, otherwise alphabetically",
+"等到頁面出現某段文字（最多等 timeout 秒），回傳有沒有出現": "Waits until some text appears on the page (up to timeout seconds); returns whether it appeared",
+"等到元素消失（最多等 timeout 秒），回傳是不是消失了": "Waits until the element disappears (up to timeout seconds); returns whether it disappeared",
+"等到網址包含某段文字（最多等 timeout 秒）": "Waits until the URL contains some text (up to timeout seconds)",
+"每天在指定時間執行一次（網頁要開著；背景分頁可能延遲幾分鐘）": "Runs once a day at the given time (the page must stay open; background tabs may be delayed by a few minutes)",
+"元素的內容改變時執行（包含之後才出現的元素）": "Runs when an element's content changes (including elements that appear later)",
+"執行期間先停止監看，避免自己改的內容又觸發自己": "Stop watching while the callback runs, so our own changes don't trigger it again",
+"頁面出現某段文字時執行（文字消失後再出現，會再執行一次）": "Runs when some text appears on the page (if it disappears and comes back, it runs again)",
+"輸入框的內容改變時執行": "Runs when the content of an input changes",
+"表單送出時執行": "Runs when a form is submitted",
+"分頁切到前景（visible）或背景（hidden）時執行": "Runs when the tab goes to the foreground (visible) or the background (hidden)",
+"捲到頁面底部時執行（離開底部再回來會再執行）": "Runs when the page is scrolled to the bottom (leaving and coming back runs it again)",
+"元素進入畫面時執行一次": "Runs once when an element scrolls into view",
+"使用者超過 seconds 秒沒有操作時執行（有操作之後會重新計時）": "Runs when the user has done nothing for more than seconds seconds (the timer restarts after any activity)",
+"廣播訊息：讓不同段程式可以互相呼叫": "Broadcast messages: let separate scripts call each other",
+"----- 鍵盤事件模擬 -----": "----- Keyboard event simulation -----",
+"type：keydown / keypress / keyup；mods：{ ctrl, alt, shift, meta }；target：選擇器或元素（不填就用目前有游標的元素）": "type: keydown / keypress / keyup; mods: { ctrl, alt, shift, meta }; target: a selector or element (defaults to the element that has the cursor)",
+"很多網站讀的是舊式的 keyCode / which，要另外補上": "Many sites read the old keyCode / which, so we add them separately",
+"模擬按一下鍵盤（按下 → 放開）。注意：只有網頁自己有在聽的按鍵功能才會反應": "Simulate pressing a key once (down → up). Note: only key features that the page itself listens for will react",
+"按住某個鍵一段時間（會像真的按住一樣一直重複送出 keydown）": "Hold a key for a while (keeps sending keydown like a real held key)",
+"像真人一樣逐字輸入（每個字都會送出 keydown / input / keyup）": "Type like a real person, one character at a time (each character sends keydown / input / keyup)",
+"----- 滑鼠事件模擬 -----": "----- Mouse event simulation -----",
+"把滑鼠移到元素上（很多選單要 hover 才會展開）": "Move the mouse over an element (many menus only open on hover)",
+"點擊畫面上某個座標（以視窗左上角為 0,0）": "Click a position on the screen (0,0 is the top-left corner of the window)",
+"這個座標上沒有元素：": "There is no element at this position:",
+"用文字找元素。kind：button 按鈕 / link 連結 / both 按鈕或連結 / any 任何元素；exact：是否要完全相同": "Find elements by text. kind: button / link / both (button or link) / any element; exact: whether the text must match exactly",
+"只留最內層的": "Keep only the innermost ones",
+"找不到有這段文字的元素：": "Couldn't find an element with that text:",
+"點擊第 n 個符合的元素（-1 代表最後一個）": "Click the nth matching element (-1 means the last one)",
+"找不到指定位置的元素：": "Couldn't find the element at that position:",
+"一直點同一個元素（例如「載入更多」），直到它消失或點滿 max 次": "Keep clicking the same element (e.g. \"Load more\") until it disappears or max clicks are reached",
+"用 alt、標題或網址的一部分找圖片": "Find images by part of the alt text, title or URL",
+"點擊圖片（如果圖片包在連結或按鈕裡，就點外面那個）": "Click an image (if it's wrapped in a link or button, click the outer one)",
+"找不到符合的圖片：": "Couldn't find a matching image:",
+"把圖片換成另一張（img 會換 src，其他元素會換背景圖）": "Swap an image for another (img gets a new src; other elements get a new background image)",
+"在元素旁邊插入一張圖片。pos：beforebegin / afterend / afterbegin / beforeend": "Insert an image next to an element. pos: beforebegin / afterend / afterbegin / beforeend",
+"圖片的網址（img 的 src，或其他元素的背景圖）": "The URL of an image (the src of an img, or another element's background image)",
+"讓「滑到才載入」的圖片立刻載入": "Load \"load-on-scroll\" images right away",
+"畫面四個角落放浮動按鈕用的容器": "A container for the floating buttons in the four corners of the screen",
+"在畫面角落放一個「圖片按鈕」。icon 可以是圖片網址、data: 圖片，或 Emoji / 文字": "Put an \"image button\" in a corner of the screen. icon can be an image URL, a data: image, or an emoji / text",
+"一直往下捲，直到頁面不再變長（適合「無限捲動」的網站）": "Keep scrolling down until the page stops getting longer (good for \"infinite scroll\" sites)",
+"改網址參數（?key=value）並重新載入；value 留空就是移除這個參數": "Change a URL parameter (?key=value) and reload; an empty value removes the parameter",
+"下載網址指向的檔案": "Download the file the URL points to",
+"讓螢幕保持亮著（跑長時間自動化時很有用）": "Keep the screen awake (handy for long-running automation)",
+"這個瀏覽器不支援保持螢幕喚醒": "This browser doesn't support keeping the screen awake",
+"無法保持螢幕喚醒：": "Couldn't keep the screen awake:",
+"解除網頁「禁止選取、複製、右鍵」的限制": "Remove the page's restrictions on selecting, copying and right-clicking",
+"傳訊息到 Discord / Slack 的 Webhook，或 POST 純文字": "Send a message to a Discord / Slack webhook, or POST plain text",
+"Webhook 傳送失敗": "Webhook request failed",
+"用 ntfy.sh 傳手機推播（手機裝 ntfy App，訂閱同一個主題就會收到）": "Send a phone push with ntfy.sh (install the ntfy app on your phone and subscribe to the same topic)",
+"ntfy 傳送失敗": "ntfy request failed",
+"發出提示音（瀏覽器通常要使用者點過網頁之後才允許發聲）": "Beep (browsers usually only allow sound after the user has clicked the page)",
+"無法播放提示音：": "Couldn't play the beep:",
+"無法播放音訊（瀏覽器可能要求先點擊網頁）：": "Couldn't play the audio (the browser may require you to click the page first):",
+"自動往下捲動（每秒 pxPerSec 像素），用 stopAutoScroll() 停下": "Scroll down automatically (pxPerSec pixels per second); stop it with stopAutoScroll()",
+"把頁面上的某段文字標上螢光筆": "Highlight some text on the page with a marker",
+"----- 文字按鈕：每個按鈕有一個名稱，之後可以用名稱改它的文字、顏色、位置… -----": "----- Text buttons: every button has a name, so you can later change its text, color, position… by that name -----",
+"建立文字按鈕（同名的已經存在就只更新文字和位置）": "Create a text button (if one with the same name already exists, only its text and position are updated)",
+"移到畫面的某個角落": "Move to a corner of the screen",
+"放在畫面上的指定座標（以視窗左上角為 0,0）": "Place at the given coordinates on the screen (0,0 is the top-left corner of the window)",
+"放進網頁裡某個元素的旁邊或裡面。pos：beforebegin / afterend / afterbegin / beforeend": "Put it next to or inside an element on the page. pos: beforebegin / afterend / afterbegin / beforeend",
+"調整按鈕：prop 是 text / bg / fg / border / size / shape / tip / css / enabled / visible": "Adjust the button: prop is text / bg / fg / border / size / shape / tip / css / enabled / visible",
+"找不到文字按鈕：": "Couldn't find the text button:",
+"找不到文字按鈕或目標元素：": "Couldn't find the text button or the target element:",
+"文字按鈕被按下時執行（按鈕可以之後才建立）": "Runs when a text button is pressed (the button can be created later)",
+"在畫面角落放一個浮動按鈕（名稱就是按鈕一開始的文字；同名的會自動加上 #2、#3…）": "Put a floating button in a corner of the screen (its name is its original text; duplicates automatically get #2, #3…)",
+"----- 嵌入網頁（iframe）：每個嵌入的網頁有一個名稱，之後可以用名稱調整 -----": "----- Embedded web pages (iframe): every embedded page has a name, so you can adjust it by name later -----",
+"YouTube、Vimeo 的一般連結會自動換成可以嵌入的網址": "Normal YouTube and Vimeo links are converted to embeddable URLs automatically",
+"設定內容：網址，或以 < 開頭的 HTML（HTML 會放在隔離的沙盒裡）": "Set the content: a URL, or HTML that starts with < (HTML is placed in an isolated sandbox)",
+"避免「網頁裡嵌入的網頁」又執行同一支腳本、一層一層嵌下去：只在最上層的頁面建立": "Prevents the embedded page from running the same script and embedding layer after layer: only create embeds in the top-level page",
+"嵌在網頁裡某個元素的旁邊或裡面。pos：beforebegin / afterend / afterbegin / beforeend": "Embed next to or inside an element on the page. pos: beforebegin / afterend / afterbegin / beforeend",
+"把某個元素換成嵌入的網頁（大小和原本的元素一樣）": "Replace an element with an embedded web page (same size as the original element)",
+"同一個角落的視窗會錯開一點": "Windows in the same corner are offset a little",
+"浮動視窗：有標題列（可以拖曳、縮小、關閉）": "Floating window: has a title bar (drag, minimize, close)",
+"彈出視窗：背景變暗，點背景或按 Esc 關閉": "Popup: the background dims; click it or press Esc to close",
+"----- 調整已經嵌入的網頁 -----": "----- Adjust embedded pages -----",
+"嵌入網頁只會在最上層的頁面建立": "Embedded pages are only created in the top-level page",
+"找不到要放置嵌入網頁的元素：": "Couldn't find the element to put the embedded page in:",
+"找不到要換掉的元素：": "Couldn't find the element to replace:",
+"縮小或展開": "Minimize or expand",
+"找不到嵌入網頁：": "Couldn't find the embedded web page:",
+"找不到浮動視窗：": "Couldn't find the floating window:",
+"嵌入的網頁載入完成時執行": "Runs when an embedded web page has loaded",
+"把 [TEXT] 重複 [TIMES] 次": "Repeat [TEXT] [TIMES] times",
+"哈": "ha",
+"把 [TEXT] 反過來": "Reverse [TEXT]",
+"從 [LIST] 隨機挑一個（用逗號分開）": "Pick one at random from [LIST] (comma-separated)",
+"[TEXT] 看起來像 Email": "[TEXT] looks like an email",
+"文字小工具 — TurboWarp 風格的擴充範例": "Text tools — a TurboWarp-style extension example",
+"黃色": "yellow",
+"粉紅色": "pink",
+"淺綠色": "light green",
+"把網頁文字放大 [PERCENT] %": "Enlarge the page text to [PERCENT] %",
+"讓 [SELECTOR] 用 [COLOR] 閃爍 [TIMES] 次": "Make [SELECTOR] blink in [COLOR], [TIMES] times",
+"這個網頁有幾個字": "How many characters this page has",
+"網頁小幫手 — 會直接操作網頁的自訂積木": "Page helper — custom blocks that operate the page directly",
+"星期幾": "weekday",
+"今天的日期（格式：[FORMAT]）": "Today's date (format: [FORMAT])",
+"距離 [DATE] 還有幾天": "Days until [DATE]"
+});
+
+/* 測試功能用到的文字 */
+Object.assign(I18N.bundled.en, {
+"測試": "Test",
+"試跑目前的腳本": "Try out your current script",
+"▶ 測試": "▶ Test",
+"測試腳本": "Test script",
+"在隔離的小視窗裡執行你目前的腳本，不會動到真正的網頁。想測試按鍵或點擊的積木，直接在小視窗裡操作就行。網路、通知、剪貼簿、新分頁這類動作只會記錄在下面。": "Runs your current script in an isolated mini window, so no real web page is touched. To test key or click blocks, just use the mini window. Actions like network requests, notifications, the clipboard and new tabs are only logged below.",
+"▶ 重新執行": "▶ Run again",
+"紀錄": "Log",
+"測試用的網頁（可以修改）": "Test page (you can edit it)",
+"測試用的網頁": "Test page",
+"還沒有事件積木，所以什麼都不會執行。": "There are no event blocks yet, so nothing will run.",
+"開始執行（{0} 個事件積木）": "Started ({0} event blocks)",
+"測試視窗沒有回應：這個環境可能不允許內嵌小視窗。請把編輯器存成檔案，用瀏覽器直接開啟再試。": "The test window did not respond: this environment may block embedded windows. Save the editor as a file, open it directly in a browser and try again."
+});
+
+/* 收藏與工作區搜尋用到的文字 */
+Object.assign(I18N.bundled.en, {
+"收藏": "Favorites",
+"收藏這個積木": "Add to favorites",
+"取消收藏": "Remove from favorites",
+"收藏這種積木": "Add this block to favorites",
+"取消收藏這種積木": "Remove this block from favorites",
+"已加入收藏": "Added to favorites",
+"已取消收藏": "Removed from favorites",
+"還沒有收藏。點積木右邊的 ☆，常用的積木就會放在這裡。": "No favorites yet. Tap the ☆ next to a block and your go-to blocks will show up here.",
+"搜尋工作區": "Search workspace",
+"搜尋工作區 (Ctrl+F)": "Search workspace (Ctrl+F)",
+"在工作區找積木（文字、網址、選擇器…）": "Find blocks in the workspace (text, URL, selector…)",
+"上一個": "Previous",
+"上一個 (Shift+Enter)": "Previous (Shift+Enter)",
+"下一個": "Next",
+"下一個 (Enter)": "Next (Enter)",
+"關閉 (Esc)": "Close (Esc)",
+"沒有符合": "No match"
+});
+
 /* =====================================================================
    積木分類、參數型別與所有內建積木
    ===================================================================== */
 const CATS = [
+  { id: 'fav', name: '收藏', color: '#e0a800', tip: '' },
   { id: 'event', name: '事件', color: '#c27c00', tip: '每段程式都從「事件」積木開始：決定「什麼時候」要執行下面的積木。像是頁面載入、按下按鍵、元素出現、內容改變、每天定時，還可以用「廣播訊息」讓不同段程式互相呼叫。' },
   { id: 'ctl', name: '控制', color: '#d9731a', tip: '等待、重複、判斷。像是「如果…那麼…」或「重複 10 次」。全自動腳本常用：等元素或文字出現、隨機等待（像真人一樣）、出錯時換個做法。' },
   { id: 'act', name: '動作', color: '#2f6fdb', tip: '替你操作網頁：點擊按鈕、輸入文字、捲動、換頁。「元素選擇器」就是告訴積木要操作哪個東西，例如 #id、.class。不知道怎麼寫？到「進階」拿「元素選擇器工具」，點一下網頁上的元素就能複製。' },
   { id: 'key', name: '鍵盤滑鼠', color: '#4c5fd5', tip: '模擬按鍵、輸入文字、滑鼠移動與點擊。注意：模擬出來的事件只有「網頁自己有在聽」的功能才會反應（例如快速鍵、選單、遊戲按鍵）；單純要把文字填進輸入框，用「動作 → 輸入文字」最穩。' },
+  { id: 'tbtn', name: '文字按鈕', color: '#c2255c', tip: '在畫面上放文字按鈕，按下去就執行積木；也能隨時改它的文字、顏色、大小、形狀和位置，或把它放進網頁的某個地方。每個按鈕有一個「名稱」，用名稱找到要調整的按鈕（用「放一個文字按鈕」做出來的按鈕，名稱就是它一開始的文字）。' },
   { id: 'btn', name: '圖片按鈕', color: '#6f8d12', tip: '在畫面上放一個圖片按鈕（可以用你自己的圖片）；也能用「文字」或「圖片」找到網頁上的按鈕再點下去，或替換、插入圖片。' },
-  { id: 'dom', name: '網頁外觀', color: '#7c4dde', tip: '改變網頁的樣子：隱藏廣告、換顏色、改文字、加入新內容。' },
+  { id: 'dom', name: '網頁外觀', color: '#7c4dde', tip: '改變網頁的樣子：隱藏廣告、換顏色、改文字、加入新內容。「嵌入網頁」可以把另一個網頁（或你自己寫的 HTML）放進目前的網頁，或做成浮動視窗、彈出視窗。有些網站禁止被嵌入，會顯示空白，這是對方網站的限制。' },
   { id: 'ui', name: '訊息', color: '#c040b0', tip: '跟使用者說話：彈出視窗、浮動提示、桌面通知。' },
   { id: 'sense', name: '偵測', color: '#1790bd', tip: '讀取網頁資訊：目前網址、元素的文字、頁面上有沒有某個東西。這些圓形積木可以放進其他積木的空格。' },
   { id: 'op', name: '運算', color: '#2e9e44', tip: '加減乘除、比較大小、處理文字。圓形和六角形的積木可以拖進其他積木的空格裡。' },
@@ -669,10 +1919,19 @@ function parseLabel(str) {
 function def(op, cat, type, label, args, gen, extra) {
   const raw = Array.isArray(label) ? label : [label];
   const d = Object.assign({
-    op, cat, type, args: args || {}, gen, labelRaw: raw, labels: raw.map(parseLabel),
+    op, cat, type, args: args || {}, gen, labelRaw: raw,
     nsub: type === 'c' ? raw.length : 0,
     rt: type === 'boolean' ? 'bool' : (type === 'reporter' ? 'any' : null),
   }, extra || {});
+  // 積木上的文字會依目前的語言翻譯（{參數} 的位置可以跟著文法調整）
+  let cache = null, cacheLang = null;
+  Object.defineProperty(d, 'labels', {
+    enumerable: true,
+    get() {
+      if (cacheLang !== I18N.lang || !cache) { cache = raw.map((r) => parseLabel(tr(r))); cacheLang = I18N.lang; }
+      return cache;
+    },
+  });
   DEFS[op] = d;
   return d;
 }
@@ -720,8 +1979,8 @@ def('hat_interval', 'event', 'hat', '每隔 {N} 秒重複執行', { N: PN(5) }, 
   fnb('setInterval(async () => {', c.body(), '}, ' + Math.max(10, Math.round((Number(r.N) || 1) * 1000)) + ');'));
 def('hat_url', 'event', 'hat', '當網址改變時', {}, (a, c) => fnb('onUrlChange(async (url) => {', c.body(), '});'), { helpers: ['onUrlChange'] });
 def('hat_select', 'event', 'hat', '當選取文字時', {}, (a, c) => fnb('onSelect(async (text) => {', c.body(), '});'), { helpers: ['onSelect'] });
-def('hat_fab', 'event', 'hat', '在畫面{POS}放一個按鈕 {TEXT}，按下時', { POS: DD([['右下角', 'br'], ['左下角', 'bl'], ['右上角', 'tr'], ['左上角', 'tl']], 'br'), TEXT: P('執行') }, (a, c) =>
-  fnb('addFab(' + a.TEXT + ', async () => {', c.body(), '}, ' + a.POS + ');'), { helpers: ['addFab'] });
+def('hat_fab', 'tbtn', 'hat', '在畫面{POS}放一個文字按鈕 {TEXT}，按下時', { POS: DD([['右下角', 'br'], ['左下角', 'bl'], ['右上角', 'tr'], ['左上角', 'tl']], 'br'), TEXT: P('執行') }, (a, c) =>
+  fnb('addFab(' + a.TEXT + ', async () => {', c.body(), '}, ' + a.POS + ');'), { helpers: ['addFab'], group: '快速做一個按鈕' });
 def('hat_menu', 'event', 'hat', '當點選猴子選單 {NAME} 時', { NAME: P('我的功能') }, (a, c) =>
   fnb('GM_registerMenuCommand(' + a.NAME + ', async () => {', c.body(), '});'), { grants: ['GM_registerMenuCommand'] });
 
@@ -755,8 +2014,8 @@ def('ctl_foritem', 'ctl', 'c', '對 {LIST} 裡的每個項目', { LIST: DDV('lis
   const v = c.loop('item', true); const body = c.sub(0); c.endLoop();
   return fnb('for (const ' + v + ' of [...' + list + ']) {', body, '}');
 });
-def('ctl_break', 'ctl', 'stack', '跳出迴圈', {}, (a, c) => (c.inLoop() ? 'break;' : (c.warn('「跳出迴圈」必須放在重複類的積木裡面'), '// （「跳出迴圈」要放在迴圈裡）')));
-def('ctl_continue', 'ctl', 'stack', '跳到下一圈', {}, (a, c) => (c.inLoop() ? 'continue;' : (c.warn('「跳到下一圈」必須放在重複類的積木裡面'), '// （「跳到下一圈」要放在迴圈裡）')));
+def('ctl_break', 'ctl', 'stack', '跳出迴圈', {}, (a, c) => (c.inLoop() ? 'break;' : (c.warn('「跳出迴圈」必須放在重複類的積木裡面'), '// ' + tr('（「跳出迴圈」要放在迴圈裡）'))));
+def('ctl_continue', 'ctl', 'stack', '跳到下一圈', {}, (a, c) => (c.inLoop() ? 'continue;' : (c.warn('「跳到下一圈」必須放在重複類的積木裡面'), '// ' + tr('（「跳到下一圈」要放在迴圈裡）'))));
 def('ctl_stop', 'ctl', 'stack', '停止這段程式', {}, () => 'return;', { cap: true });
 def('loop_el', 'ctl', 'reporter', '目前的元素', {}, (a, c) => {
   const l = c.find('el');
@@ -902,7 +2161,7 @@ def('list_split', 'var', 'stack', '把 {TEXT} 用 {SEP} 切開放進 {LIST}', { 
 def('hat_func', 'func', 'hat', '定義函式 {NAME}', { NAME: P('我的函式') }, (a, c, r) => fnb('async function ' + c.fname(r.NAME) + '() {', c.body(), '}'), { section: 'func' });
 def('func_call', 'func', 'stack', '執行函式 {NAME}', { NAME: DDV('funcs') }, (a, c, r) => {
   const id = c.fident(r.NAME);
-  if (!id) { c.warn('找不到名為「' + (r.NAME || '') + '」的函式'); return '// （找不到函式 ' + String(r.NAME || '').replace(/[\r\n]/g, ' ') + '）'; }
+  if (!id) { c.warn(trf('找不到名為「{0}」的函式', r.NAME || '')); return '// ' + trf('（找不到函式 {0}）', String(r.NAME || '').replace(/[\r\n]/g, ' ')); }
   return 'await ' + id + '();';
 });
 
@@ -1045,6 +2304,36 @@ def('mouse_click_at', 'key', 'stack', '點擊畫面座標 X {X} Y {Y}', { X: N(2
 def('mouse_dblclick', 'key', 'stack', '雙擊 {SEL}', { SEL: SEL('#item') }, (a) => 'dblClick(' + a.SEL + ');', { helpers: ['dblClick'] });
 def('mouse_right', 'key', 'stack', '對 {SEL} 按滑鼠右鍵', { SEL: SEL('#item') }, (a) => 'rightClick(' + a.SEL + ');', { helpers: ['rightClick'] });
 
+/* =====================  文字按鈕  ===================== */
+const TBTN_POS = [['右下角', 'br'], ['左下角', 'bl'], ['右上角', 'tr'], ['左上角', 'tl']];
+const tbtnSet = (a, prop, value) => 'tbtnSet(' + a.NAME + ', ' + q(prop) + ', ' + value + ');';
+def('tbtn_create', 'tbtn', 'stack', '建立文字按鈕 {NAME}，文字 {TEXT}，放在{POS}', { NAME: T('按鈕1'), TEXT: T('按我'), POS: DD(TBTN_POS, 'br') }, (a) =>
+  'tbtnCreate(' + a.NAME + ', ' + a.TEXT + ', ' + a.POS + ');', { helpers: ['tbtnCore'], group: '建立按鈕與按下時' });
+def('hat_tbtn', 'tbtn', 'hat', '當文字按鈕 {NAME} 被按下時', { NAME: P('按鈕1') }, (a, c) =>
+  fnb('onTextButton(' + a.NAME + ', async (el) => {', c.body({ kind: 'el', name: 'el' }), '});'), { helpers: ['onTextButton'] });
+def('tbtn_click', 'tbtn', 'stack', '按下文字按鈕 {NAME}', { NAME: T('按鈕1') }, (a) => 'tbtnClick(' + a.NAME + ');', { helpers: ['tbtnCore'] });
+def('tbtn_text', 'tbtn', 'stack', '把文字按鈕 {NAME} 的文字改成 {TEXT}', { NAME: T('按鈕1'), TEXT: T('新文字') }, (a) => tbtnSet(a, 'text', a.TEXT), { helpers: ['tbtnCore'], group: '調整按鈕' });
+def('tbtn_color', 'tbtn', 'stack', '把文字按鈕 {NAME} 的{WHICH}設為 {C}', { NAME: T('按鈕1'), WHICH: DD([['背景色', 'bg'], ['文字顏色', 'fg'], ['邊框顏色', 'border']], 'bg'), C: COL('#e8590c') }, (a, c, r) =>
+  tbtnSet(a, ['bg', 'fg', 'border'].includes(r.WHICH) ? r.WHICH : 'bg', a.C), { helpers: ['tbtnCore'] });
+def('tbtn_size', 'tbtn', 'stack', '把文字按鈕 {NAME} 的大小設為{SIZE}', { NAME: T('按鈕1'), SIZE: DD([['小', 's'], ['中', 'm'], ['大', 'l'], ['特大', 'xl']], 'l') }, (a, c, r) =>
+  tbtnSet(a, 'size', q(['s', 'm', 'l', 'xl'].includes(r.SIZE) ? r.SIZE : 'm')), { helpers: ['tbtnCore'] });
+def('tbtn_shape', 'tbtn', 'stack', '把文字按鈕 {NAME} 的形狀設為{SHAPE}', { NAME: T('按鈕1'), SHAPE: DD([['圓形膠囊', 'pill'], ['圓角方形', 'round'], ['方形', 'square']], 'round') }, (a, c, r) =>
+  tbtnSet(a, 'shape', q(['pill', 'round', 'square'].includes(r.SHAPE) ? r.SHAPE : 'pill')), { helpers: ['tbtnCore'] });
+def('tbtn_move', 'tbtn', 'stack', '把文字按鈕 {NAME} 移到{POS}', { NAME: T('按鈕1'), POS: DD(TBTN_POS, 'tl') }, (a) => 'tbtnMove(' + a.NAME + ', ' + a.POS + ');', { helpers: ['tbtnCore'] });
+def('tbtn_place', 'tbtn', 'stack', '把文字按鈕 {NAME} 放在畫面 X {X} Y {Y}', { NAME: T('按鈕1'), X: N(100), Y: N(100) }, (a) => 'tbtnPlace(' + a.NAME + ', ' + a.X + ', ' + a.Y + ');', { helpers: ['tbtnCore'] });
+def('tbtn_attach', 'tbtn', 'stack', '把文字按鈕 {NAME} 放到 {SEL} 的{POS}', { NAME: T('按鈕1'), SEL: SEL('h1'), POS: DD(POS_INSERT, 'afterend') }, (a) =>
+  'tbtnAttach(' + a.NAME + ', ' + a.SEL + ', ' + a.POS + ');', { helpers: ['tbtnCore'] });
+def('tbtn_show', 'tbtn', 'stack', '{ACT}文字按鈕 {NAME}', { ACT: DD([['顯示', 'show'], ['隱藏', 'hide'], ['移除', 'remove']], 'hide'), NAME: T('按鈕1') }, (a, c, r) =>
+  (r.ACT === 'remove' ? 'tbtnRemove(' + a.NAME + ');' : tbtnSet(a, 'visible', r.ACT === 'show' ? 'true' : 'false')), { helpers: ['tbtnCore'] });
+def('tbtn_enable', 'tbtn', 'stack', '{ACT}文字按鈕 {NAME}', { ACT: DD([['啟用', 'on'], ['停用', 'off']], 'off'), NAME: T('按鈕1') }, (a, c, r) =>
+  tbtnSet(a, 'enabled', r.ACT === 'on' ? 'true' : 'false'), { helpers: ['tbtnCore'] });
+def('tbtn_tip', 'tbtn', 'stack', '設定文字按鈕 {NAME} 的提示文字為 {TEXT}', { NAME: T('按鈕1'), TEXT: T('按一下會執行') }, (a) => tbtnSet(a, 'tip', a.TEXT), { helpers: ['tbtnCore'] });
+def('tbtn_style', 'tbtn', 'stack', '對文字按鈕 {NAME} 套用樣式 {CSS}', { NAME: T('按鈕1'), CSS: AR('font-size: 20px; letter-spacing: 2px;') }, (a) => tbtnSet(a, 'css', a.CSS), { helpers: ['tbtnCore'] });
+def('tbtn_clear', 'tbtn', 'stack', '移除所有文字按鈕', {}, () => 'tbtnClear();', { helpers: ['tbtnCore'] });
+def('tbtn_exists', 'tbtn', 'boolean', '有文字按鈕 {NAME}', { NAME: T('按鈕1') }, (a) => '!!tbtnGet(' + a.NAME + ')', { helpers: ['tbtnCore'], group: '偵測文字按鈕' });
+def('tbtn_gettext', 'tbtn', 'reporter', '文字按鈕 {NAME} 的文字', { NAME: T('按鈕1') }, (a) => '(tbtnGet(' + a.NAME + ')?.textContent ?? "")', { rt: 'str', helpers: ['tbtnCore'] });
+def('tbtn_el', 'tbtn', 'reporter', '文字按鈕 {NAME}（元素）', { NAME: T('按鈕1') }, (a) => 'tbtnGet(' + a.NAME + ')', { rt: 'el', helpers: ['tbtnCore'] });
+
 /* =====================  按鈕與圖片  ===================== */
 def('hat_fab_img', 'btn', 'hat', '在畫面{POS}放一個圖片按鈕 {IMG}，大小 {SIZE}，按下時', {
   POS: DD([['右下角', 'br'], ['左下角', 'bl'], ['右上角', 'tr'], ['左上角', 'tl']], 'br'), IMG: IMGF('🔔'), SIZE: DD([['小', '36'], ['中', '48'], ['大', '64']], '48'),
@@ -1074,6 +2363,36 @@ def('img_filter', 'btn', 'stack', '讓 {SEL} {EFFECT}', { SEL: SEL('img'), EFFEC
 /* =====================  網頁外觀（更多）  ===================== */
 def('dom_mark', 'dom', 'stack', '把頁面上的文字 {TEXT} 標上 {C} 螢光筆', { TEXT: T('重要'), C: COL('#fff176') }, (a) => 'highlightText(' + a.TEXT + ', ' + a.C + ');', { helpers: ['highlightText'] });
 def('dom_unlock', 'dom', 'stack', '解除網頁禁止選取、複製、右鍵的限制', {}, () => 'unlockCopy();', { helpers: ['unlockCopy'], grants: ['GM_addStyle'] });
+
+/* =====================  網頁外觀：嵌入網頁  ===================== */
+const EMBED_POS = [['右下角', 'br'], ['左下角', 'bl'], ['右上角', 'tr'], ['左上角', 'tl'], ['螢幕中央', 'c']];
+const embedOpts = { helpers: ['embedCore'], noframes: true };
+def('embed_create', 'dom', 'stack', '嵌入網頁 {NAME}：{SRC}，放在 {SEL} 的{POS}，寬 {W} 高 {H}', {
+  NAME: T('嵌入1'), SRC: T('https://example.com'), SEL: SEL('body'), POS: DD(POS_INSERT, 'beforeend'), W: T('100%'), H: T('400px'),
+}, (a) => 'embedCreate(' + a.NAME + ', ' + a.SRC + ', ' + a.SEL + ', ' + a.POS + ', ' + a.W + ', ' + a.H + ');', Object.assign({ group: '嵌入網頁（網址或 HTML 都可以）' }, embedOpts));
+def('embed_float', 'dom', 'stack', '在畫面{POS}放一個浮動視窗 {NAME}：{SRC}，寬 {W} 高 {H}', {
+  POS: DD(EMBED_POS, 'br'), NAME: T('視窗1'), SRC: T('https://example.com'), W: T('360px'), H: T('280px'),
+}, (a) => 'embedFloat(' + a.NAME + ', ' + a.SRC + ', ' + a.POS + ', ' + a.W + ', ' + a.H + ');', embedOpts);
+def('embed_modal', 'dom', 'stack', '用彈出視窗顯示 {NAME}：{SRC}，寬 {W} 高 {H}（點背景或按 Esc 關閉）', {
+  NAME: T('彈出1'), SRC: T('https://example.com'), W: T('800px'), H: T('80vh'),
+}, (a) => 'embedModal(' + a.NAME + ', ' + a.SRC + ', ' + a.W + ', ' + a.H + ');', embedOpts);
+def('embed_replace', 'dom', 'stack', '把 {SEL} 換成嵌入的網頁 {NAME}：{SRC}', { SEL: SEL('.ad'), NAME: T('嵌入1'), SRC: T('https://example.com') }, (a) =>
+  'embedReplace(' + a.NAME + ', ' + a.SEL + ', ' + a.SRC + ');', embedOpts);
+def('hat_embed_load', 'dom', 'hat', '當嵌入網頁 {NAME} 載入完成時', { NAME: P('嵌入1') }, (a, c) =>
+  fnb('onEmbedLoad(' + a.NAME + ', async (el) => {', c.body({ kind: 'el', name: 'el' }), '});'), { helpers: ['onEmbedLoad'], noframes: true });
+def('embed_src', 'dom', 'stack', '把嵌入網頁 {NAME} 的內容改成 {SRC}', { NAME: T('嵌入1'), SRC: T('https://example.org') }, (a) =>
+  'embedSetSource(' + a.NAME + ', ' + a.SRC + ');', Object.assign({ group: '調整嵌入的網頁' }, embedOpts));
+def('embed_reload', 'dom', 'stack', '重新載入嵌入網頁 {NAME}', { NAME: T('嵌入1') }, (a) => 'embedReload(' + a.NAME + ');', embedOpts);
+def('embed_size', 'dom', 'stack', '把嵌入網頁 {NAME} 的大小設為 寬 {W} 高 {H}', { NAME: T('嵌入1'), W: T('100%'), H: T('500px') }, (a) =>
+  'embedResize(' + a.NAME + ', ' + a.W + ', ' + a.H + ');', embedOpts);
+def('embed_move', 'dom', 'stack', '把浮動視窗 {NAME} 移到{POS}', { NAME: T('視窗1'), POS: DD(EMBED_POS, 'tl') }, (a) => 'embedMove(' + a.NAME + ', ' + a.POS + ');', embedOpts);
+def('embed_style', 'dom', 'stack', '對嵌入網頁 {NAME} 套用樣式 {CSS}', { NAME: T('嵌入1'), CSS: AR('border-radius: 12px; opacity: 0.9;') }, (a) =>
+  'embedStyle(' + a.NAME + ', ' + a.CSS + ');', embedOpts);
+def('embed_show', 'dom', 'stack', '{ACT}嵌入網頁 {NAME}', { ACT: DD([['顯示', 'show'], ['隱藏', 'hide'], ['移除', 'remove']], 'hide'), NAME: T('嵌入1') }, (a, c, r) =>
+  (r.ACT === 'remove' ? 'embedRemove(' + a.NAME + ');' : 'embedVisible(' + a.NAME + ', ' + (r.ACT === 'show' ? 'true' : 'false') + ');'), embedOpts);
+def('embed_clear', 'dom', 'stack', '移除所有嵌入網頁', {}, () => 'embedClear();', embedOpts);
+def('embed_exists', 'dom', 'boolean', '有嵌入網頁 {NAME}', { NAME: T('嵌入1') }, (a) => '!!embedGet(' + a.NAME + ')', Object.assign({ group: '偵測嵌入的網頁' }, embedOpts));
+def('embed_el', 'dom', 'reporter', '嵌入網頁 {NAME}（元素）', { NAME: T('嵌入1') }, (a) => '(embedGet(' + a.NAME + ')?.frame ?? null)', Object.assign({ rt: 'el' }, embedOpts));
 
 /* =====================  訊 息（更多）  ===================== */
 def('ui_beep', 'ui', 'stack', '發出提示音（{HZ} Hz，{S} 秒）', { HZ: N(880), S: N(0.2) }, (a) => 'beep(' + a.HZ + ', ' + a.S + ');', { helpers: ['beep'], group: '聲音' });
@@ -2001,7 +3320,7 @@ helper('clickText', ['findByText'], String.raw`
 function clickText(text, kind, exact) {
   const el = findByText(text, kind, exact)[0];
   if (el) el.click();
-  else console.warn('找不到文字為「' + text + '」的元素');
+  else console.warn('找不到有這段文字的元素：', text);
 }`);
 
 helper('clickNth', ['els'], String.raw`
@@ -2010,7 +3329,7 @@ function clickNth(target, n) {
   const list = els(target);
   const el = list[n < 0 ? list.length + n : n - 1];
   if (el) el.click();
-  else console.warn('找不到第 ' + n + ' 個：', target);
+  else console.warn('找不到指定位置的元素：', n, target);
 }`);
 
 helper('clickUntilGone', ['el1', 'visible', 'sleep'], String.raw`
@@ -2110,17 +3429,6 @@ function fabBox(pos) {
     document.documentElement.appendChild(box);
   }
   return box;
-}`);
-
-helper('addFab', ['fabBox'], String.raw`
-// 在畫面角落放一個浮動按鈕
-function addFab(text, handler, pos = 'br') {
-  const btn = document.createElement('button');
-  btn.textContent = text;
-  btn.style.cssText = 'padding:10px 16px;border:0;border-radius:999px;background:#4c6ef5;color:#fff;font:600 14px system-ui,sans-serif;box-shadow:0 4px 14px rgba(0,0,0,.3);cursor:pointer;';
-  btn.addEventListener('click', handler);
-  fabBox(pos).appendChild(btn);
-  return btn;
 }`);
 
 helper('addImgFab', ['fabBox'], String.raw`
@@ -2314,13 +3622,331 @@ function highlightText(text, color) {
   });
 }`);
 
+/* ---------- 文字按鈕：每個按鈕有一個名稱，之後可以用名稱改文字、顏色、位置… ---------- */
+helper('tbtnCore', ['fabBox', 'el1'], String.raw`
+// ----- 文字按鈕：每個按鈕有一個名稱，之後可以用名稱改它的文字、顏色、位置… -----
+const textButtons = Object.create(null);
+const TBTN_STYLE = 'padding:10px 16px;border:0;border-radius:999px;background:#4c6ef5;color:#fff;font:600 14px system-ui,sans-serif;box-shadow:0 4px 14px rgba(0,0,0,.3);cursor:pointer;';
+function tbtnGet(name) {
+  const btn = textButtons[String(name)];
+  return btn && btn.isConnected ? btn : null;
+}
+// 建立文字按鈕（同名的已經存在就只更新文字和位置）
+function tbtnCreate(name, text, pos = 'br') {
+  name = String(name);
+  let btn = textButtons[name];
+  if (!btn) {
+    btn = document.createElement('button');
+    btn.type = 'button';
+    btn.style.cssText = TBTN_STYLE;
+    btn.setAttribute('data-tm-btn', name);
+    textButtons[name] = btn;
+  }
+  btn.textContent = String(text);
+  tbtnMove(name, pos);
+  return btn;
+}
+// 移到畫面的某個角落
+function tbtnMove(name, pos = 'br') {
+  const btn = textButtons[String(name)];
+  if (!btn) { console.warn('找不到文字按鈕：', name); return; }
+  btn.style.position = '';
+  btn.style.left = '';
+  btn.style.top = '';
+  fabBox(pos).appendChild(btn);
+}
+// 放在畫面上的指定座標（以視窗左上角為 0,0）
+function tbtnPlace(name, x, y) {
+  const btn = textButtons[String(name)];
+  if (!btn) { console.warn('找不到文字按鈕：', name); return; }
+  btn.style.position = 'fixed';
+  btn.style.left = Number(x) + 'px';
+  btn.style.top = Number(y) + 'px';
+  btn.style.zIndex = '2147483647';
+  document.documentElement.appendChild(btn);
+}
+// 放進網頁裡某個元素的旁邊或裡面。pos：beforebegin / afterend / afterbegin / beforeend
+function tbtnAttach(name, target, pos) {
+  const btn = textButtons[String(name)];
+  const el = el1(target);
+  if (!btn || !el) { console.warn('找不到文字按鈕或目標元素：', name, target); return; }
+  btn.style.position = '';
+  btn.style.left = '';
+  btn.style.top = '';
+  el.insertAdjacentElement(pos, btn);
+}
+// 調整按鈕：prop 是 text / bg / fg / border / size / shape / tip / css / enabled / visible
+function tbtnSet(name, prop, value) {
+  const btn = tbtnGet(name);
+  if (!btn) { console.warn('找不到文字按鈕：', name); return; }
+  const s = btn.style;
+  if (prop === 'text') btn.textContent = String(value);
+  else if (prop === 'bg') s.setProperty('background', value, 'important');
+  else if (prop === 'fg') s.setProperty('color', value, 'important');
+  else if (prop === 'border') s.setProperty('border', '2px solid ' + value, 'important');
+  else if (prop === 'size') {
+    const z = ({ s: ['12px', '6px 12px'], m: ['14px', '10px 16px'], l: ['18px', '12px 22px'], xl: ['24px', '16px 28px'] })[value] || ['14px', '10px 16px'];
+    s.fontSize = z[0];
+    s.padding = z[1];
+  } else if (prop === 'shape') s.borderRadius = ({ pill: '999px', round: '10px', square: '2px' })[value] || '999px';
+  else if (prop === 'tip') btn.title = String(value);
+  else if (prop === 'css') s.cssText += ';' + value;
+  else if (prop === 'enabled') { btn.disabled = !value; s.opacity = value ? '' : '0.5'; s.cursor = value ? 'pointer' : 'not-allowed'; }
+  else if (prop === 'visible') s.display = value ? '' : 'none';
+}
+function tbtnRemove(name) {
+  const btn = textButtons[String(name)];
+  if (btn) btn.remove();
+  delete textButtons[String(name)];
+}
+function tbtnClick(name) {
+  const btn = tbtnGet(name);
+  if (btn) btn.click();
+  else console.warn('找不到文字按鈕：', name);
+}
+function tbtnClear() {
+  Object.keys(textButtons).forEach(tbtnRemove);
+}`);
+HELP.tbtnGet = HELP.tbtnCreate = HELP.tbtnMove = HELP.tbtnPlace = HELP.tbtnAttach = HELP.tbtnSet = HELP.tbtnRemove = HELP.tbtnClick = HELP.tbtnClear = HELP.textButtons = HELP.TBTN_STYLE = HELP.tbtnCore;
+
+helper('onTextButton', [], String.raw`
+// 文字按鈕被按下時執行（按鈕可以之後才建立）
+function onTextButton(name, callback) {
+  document.addEventListener('click', (e) => {
+    const btn = e.target.closest && e.target.closest('[data-tm-btn]');
+    if (btn && btn.getAttribute('data-tm-btn') === String(name)) callback(btn);
+  }, true);
+}`);
+
+helper('addFab', ['tbtnCore'], String.raw`
+// 在畫面角落放一個浮動按鈕（名稱就是按鈕一開始的文字；同名的會自動加上 #2、#3…）
+function addFab(text, handler, pos = 'br') {
+  let name = String(text), n = 2;
+  while (tbtnGet(name)) name = text + '#' + (n++);
+  const btn = tbtnCreate(name, text, pos);
+  btn.addEventListener('click', handler);
+  return btn;
+}`);
+
+/* ---------- 嵌入網頁（iframe）：每個嵌入的網頁有一個名稱，之後可以用名稱調整 ---------- */
+helper('embedCore', ['el1'], String.raw`
+// ----- 嵌入網頁（iframe）：每個嵌入的網頁有一個名稱，之後可以用名稱調整 -----
+const embeds = Object.create(null);
+const embedSizeCss = (v, d) => {
+  v = String(v == null ? '' : v).trim();
+  return !v ? d : (/^\d+(\.\d+)?$/.test(v) ? v + 'px' : v);
+};
+// YouTube、Vimeo 的一般連結會自動換成可以嵌入的網址
+function embedUrl(u) {
+  u = String(u).trim();
+  let m = u.match(/(?:youtube\.com\/watch\?(?:[^#]*&)?v=|youtu\.be\/|youtube\.com\/shorts\/)([\w-]{11})/);
+  if (m) return 'https://www.youtube.com/embed/' + m[1];
+  m = u.match(/vimeo\.com\/(\d+)/);
+  if (m) return 'https://player.vimeo.com/video/' + m[1];
+  return u;
+}
+// 設定內容：網址，或以 < 開頭的 HTML（HTML 會放在隔離的沙盒裡）
+function embedSource(f, src) {
+  if (/^\s*</.test(String(src))) {
+    f.removeAttribute('src');
+    f.setAttribute('sandbox', 'allow-scripts allow-forms allow-popups allow-modals');
+    f.srcdoc = String(src);
+  } else {
+    f.removeAttribute('srcdoc');
+    f.removeAttribute('sandbox');
+    f.src = embedUrl(src);
+  }
+}
+function embedFrame(src, w, h) {
+  const f = document.createElement('iframe');
+  embedSource(f, src);
+  f.setAttribute('allow', 'fullscreen; autoplay; clipboard-write; encrypted-media; picture-in-picture');
+  f.setAttribute('allowfullscreen', '');
+  f.style.cssText = 'border:0;background:#fff;display:block;width:' + embedSizeCss(w, '100%') + ';height:' + embedSizeCss(h, '300px') + ';';
+  return f;
+}
+function embedGet(name) {
+  const e = embeds[String(name)];
+  return e && e.box.isConnected ? e : null;
+}
+function embedRemove(name) {
+  const e = embeds[String(name)];
+  if (e) { if (e.cleanup) e.cleanup(); e.box.remove(); }
+  delete embeds[String(name)];
+}
+function embedAdd(name, entry) {
+  name = String(name);
+  embedRemove(name);
+  entry.frame.setAttribute('data-tm-embed', name);
+  entry.display = entry.box.style.display;
+  embeds[name] = entry;
+  return entry;
+}
+// 避免「網頁裡嵌入的網頁」又執行同一支腳本、一層一層嵌下去：只在最上層的頁面建立
+function embedOk() {
+  if (window.top !== window.self) { console.warn('嵌入網頁只會在最上層的頁面建立'); return false; }
+  return true;
+}
+function embedBarButton(text, title) {
+  const b = document.createElement('button');
+  b.type = 'button';
+  b.textContent = text;
+  b.title = title;
+  b.style.cssText = 'border:0;background:transparent;color:#fff;font:600 14px system-ui,sans-serif;cursor:pointer;padding:2px 6px;border-radius:6px;';
+  return b;
+}
+// 嵌在網頁裡某個元素的旁邊或裡面。pos：beforebegin / afterend / afterbegin / beforeend
+function embedCreate(name, src, target, pos, w, h) {
+  if (!embedOk()) return;
+  const el = el1(target);
+  if (!el) { console.warn('找不到要放置嵌入網頁的元素：', target); return; }
+  const f = embedFrame(src, w, h);
+  embedAdd(name, { box: f, frame: f, kind: 'inline', size: (nw, nh) => { f.style.width = embedSizeCss(nw, f.style.width); f.style.height = embedSizeCss(nh, f.style.height); } });
+  el.insertAdjacentElement(pos, f);
+}
+// 把某個元素換成嵌入的網頁（大小和原本的元素一樣）
+function embedReplace(name, target, src) {
+  if (!embedOk()) return;
+  const el = el1(target);
+  if (!el) { console.warn('找不到要換掉的元素：', target); return; }
+  const r = el.getBoundingClientRect();
+  const f = embedFrame(src, r.width ? r.width + 'px' : '100%', r.height ? r.height + 'px' : '300px');
+  embedAdd(name, { box: f, frame: f, kind: 'inline', size: (nw, nh) => { f.style.width = embedSizeCss(nw, f.style.width); f.style.height = embedSizeCss(nh, f.style.height); } });
+  el.replaceWith(f);
+}
+function embedPlace(box, pos, index) {
+  box.style.top = box.style.bottom = box.style.left = box.style.right = box.style.transform = '';
+  if (pos === 'c') { box.style.left = '50%'; box.style.top = '50%'; box.style.transform = 'translate(-50%, -50%)'; return; }
+  box.style[pos.charAt(0) === 't' ? 'top' : 'bottom'] = (16 + (index || 0) * 28) + 'px';   // 同一個角落的視窗會錯開一點
+  box.style[pos.charAt(1) === 'l' ? 'left' : 'right'] = '16px';
+}
+// 浮動視窗：有標題列（可以拖曳、縮小、關閉）
+function embedFloat(name, src, pos, w, h) {
+  if (!embedOk()) return;
+  pos = ['br', 'bl', 'tr', 'tl', 'c'].includes(pos) ? pos : 'br';
+  const box = document.createElement('div');
+  box.style.cssText = 'position:fixed;z-index:2147483646;display:flex;flex-direction:column;max-width:96vw;max-height:92vh;background:#fff;border:1px solid rgba(0,0,0,.25);border-radius:12px;box-shadow:0 10px 30px rgba(0,0,0,.35);overflow:hidden;width:' + embedSizeCss(w, '360px') + ';';
+  const bar = document.createElement('div');
+  bar.style.cssText = 'display:flex;align-items:center;gap:4px;padding:6px 8px;background:#2b3245;color:#fff;font:600 13px system-ui,sans-serif;cursor:move;user-select:none;touch-action:none;';
+  const title = document.createElement('span');
+  title.textContent = String(name);
+  title.style.cssText = 'flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;';
+  const mini = embedBarButton('▁', '縮小或展開');
+  const close = embedBarButton('✕', '關閉');
+  bar.append(title, mini, close);
+  const f = embedFrame(src, '100%', h || '280px');
+  box.append(bar, f);
+  const same = Object.keys(embeds).filter((k) => embeds[k].kind === 'float' && embeds[k].pos === pos && k !== String(name)).length;
+  embedPlace(box, pos, same);
+  document.documentElement.appendChild(box);
+  mini.addEventListener('click', () => { f.style.display = f.style.display === 'none' ? 'block' : 'none'; });
+  close.addEventListener('click', () => embedRemove(name));
+  bar.addEventListener('pointerdown', (e) => {
+    if (e.target.closest('button')) return;
+    const r = box.getBoundingClientRect();
+    box.style.left = r.left + 'px';
+    box.style.top = r.top + 'px';
+    box.style.right = box.style.bottom = box.style.transform = '';
+    const dx = e.clientX - r.left, dy = e.clientY - r.top;
+    bar.setPointerCapture(e.pointerId);
+    const move = (ev) => {
+      box.style.left = Math.max(0, Math.min(window.innerWidth - 60, ev.clientX - dx)) + 'px';
+      box.style.top = Math.max(0, Math.min(window.innerHeight - 30, ev.clientY - dy)) + 'px';
+    };
+    const up = () => { bar.removeEventListener('pointermove', move); bar.removeEventListener('pointerup', up); };
+    bar.addEventListener('pointermove', move);
+    bar.addEventListener('pointerup', up);
+  });
+  embedAdd(name, {
+    box, frame: f, kind: 'float', pos,
+    size: (nw, nh) => { if (nw) box.style.width = embedSizeCss(nw, box.style.width); if (nh) f.style.height = embedSizeCss(nh, f.style.height); },
+    move: (p) => embedPlace(box, p, 0),
+  });
+}
+// 彈出視窗：背景變暗，點背景或按 Esc 關閉
+function embedModal(name, src, w, h) {
+  if (!embedOk()) return;
+  const overlay = document.createElement('div');
+  overlay.style.cssText = 'position:fixed;inset:0;z-index:2147483646;background:rgba(0,0,0,.55);display:flex;align-items:center;justify-content:center;padding:16px;';
+  const panel = document.createElement('div');
+  panel.style.cssText = 'display:flex;flex-direction:column;background:#fff;border-radius:12px;overflow:hidden;box-shadow:0 12px 40px rgba(0,0,0,.45);max-width:96vw;max-height:92vh;width:' + embedSizeCss(w, '800px') + ';height:' + embedSizeCss(h, '80vh') + ';';
+  const bar = document.createElement('div');
+  bar.style.cssText = 'display:flex;align-items:center;gap:4px;padding:6px 8px;background:#2b3245;color:#fff;font:600 13px system-ui,sans-serif;';
+  const title = document.createElement('span');
+  title.textContent = String(name);
+  title.style.cssText = 'flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;';
+  const close = embedBarButton('✕', '關閉');
+  bar.append(title, close);
+  const f = embedFrame(src, '100%', '100%');
+  f.style.flex = '1 1 auto';
+  f.style.height = 'auto';
+  f.style.minHeight = '0';
+  panel.append(bar, f);
+  overlay.appendChild(panel);
+  document.documentElement.appendChild(overlay);
+  close.addEventListener('click', () => embedRemove(name));
+  overlay.addEventListener('mousedown', (e) => { if (e.target === overlay) embedRemove(name); });
+  const onKey = (e) => { if (e.key === 'Escape') embedRemove(name); };
+  document.addEventListener('keydown', onKey);
+  embedAdd(name, {
+    box: overlay, frame: f, kind: 'modal',
+    cleanup: () => document.removeEventListener('keydown', onKey),
+    size: (nw, nh) => { if (nw) panel.style.width = embedSizeCss(nw, panel.style.width); if (nh) panel.style.height = embedSizeCss(nh, panel.style.height); },
+  });
+}
+// ----- 調整已經嵌入的網頁 -----
+function embedSetSource(name, src) {
+  const e = embedGet(name);
+  if (!e) { console.warn('找不到嵌入網頁：', name); return; }
+  embedSource(e.frame, src);
+}
+function embedReload(name) {
+  const e = embedGet(name);
+  if (!e) { console.warn('找不到嵌入網頁：', name); return; }
+  if (e.frame.hasAttribute('srcdoc')) e.frame.srcdoc = e.frame.srcdoc;
+  else e.frame.src = e.frame.src;
+}
+function embedResize(name, w, h) {
+  const e = embedGet(name);
+  if (!e) { console.warn('找不到嵌入網頁：', name); return; }
+  e.size(w, h);
+}
+function embedMove(name, pos) {
+  const e = embedGet(name);
+  if (!e || !e.move) { console.warn('找不到浮動視窗：', name); return; }
+  e.move(pos);
+}
+function embedStyle(name, css) {
+  const e = embedGet(name);
+  if (!e) { console.warn('找不到嵌入網頁：', name); return; }
+  e.box.style.cssText += ';' + css;
+}
+function embedVisible(name, on) {
+  const e = embedGet(name);
+  if (!e) { console.warn('找不到嵌入網頁：', name); return; }
+  e.box.style.display = on ? e.display : 'none';
+}
+function embedClear() {
+  Object.keys(embeds).forEach(embedRemove);
+}`);
+['embeds', 'embedSizeCss', 'embedUrl', 'embedSource', 'embedFrame', 'embedGet', 'embedRemove', 'embedAdd', 'embedOk', 'embedBarButton', 'embedCreate', 'embedReplace', 'embedPlace', 'embedFloat', 'embedModal', 'embedSetSource', 'embedReload', 'embedResize', 'embedMove', 'embedStyle', 'embedVisible', 'embedClear'].forEach((n) => { HELP[n] = HELP.embedCore; });
+
+helper('onEmbedLoad', [], String.raw`
+// 嵌入的網頁載入完成時執行
+function onEmbedLoad(name, callback) {
+  document.addEventListener('load', (e) => {
+    const f = e.target;
+    if (f && f.tagName === 'IFRAME' && f.getAttribute('data-tm-embed') === String(name)) callback(f);
+  }, true);
+}`);
+
 /* =====================================================================
    資料模型：腳本設定、變數、積木樹、序列化
    ===================================================================== */
 function defaultMeta() {
   return {
-    name: '我的腳本', namespace: 'http://tampermonkey.net/', version: '1.0',
-    description: '用「竄改猴積木編輯器」製作的腳本', author: '',
+    name: tr('我的腳本'), namespace: 'http://tampermonkey.net/', version: '1.0',
+    description: tr('用「竄改猴積木編輯器」製作的腳本'), author: '',
     matches: ['*://*/*'], excludes: [], runAt: 'document-idle', noframes: false, requires: [], grants: [], icon: '',
   };
 }
@@ -2348,12 +3974,13 @@ function ddOptions(spec) {
   }
   if (o === 'funcs') return funcNames().map((n) => [n, n]);
   if (typeof o === 'function') return o();
-  return (o || []).map((x) => (Array.isArray(x) ? x : [String(x), x]));
+  const nt = !!spec.nt;   // nt：不翻譯（自訂積木的選單是使用者自己的內容）
+  return (o || []).map((x) => (Array.isArray(x) ? [nt ? x[0] : tr(String(x[0])), x[1]] : [nt ? String(x) : tr(String(x)), x]));
 }
 function ddLabel(spec, value) {
   const hit = ddOptions(spec).find((o) => String(o[1]) === String(value));
   if (hit) return hit[0];
-  if (value == null || value === '') return spec.o === 'vars' ? '選擇變數' : spec.o === 'lists' ? '選擇清單' : spec.o === 'funcs' ? '選擇函式' : '？';
+  if (value == null || value === '') return tr(spec.o === 'vars' ? '選擇變數' : spec.o === 'lists' ? '選擇清單' : spec.o === 'funcs' ? '選擇函式' : '？');
   return String(value);
 }
 function argDefault(spec) {
@@ -2362,7 +3989,8 @@ function argDefault(spec) {
     if (typeof spec.o === 'string' || typeof spec.o === 'function') { const o = ddOptions(spec); return o.length ? o[0][1] : ''; }
     return spec.d;
   }
-  return spec.d == null ? '' : spec.d;
+  if (spec.d == null) return '';
+  return (typeof spec.d === 'string' && spec.k !== 'img') ? tr(spec.d) : spec.d;
 }
 function mkBlock(op, args) {
   const d = DEFS[op];
@@ -2570,10 +4198,10 @@ function blockCtx(G, b) {
       return false;
     },
     newFlag() { G.flagCount = (G.flagCount || 0) + 1; const n = 'once' + G.flagCount; G.extra.push('let ' + n + ' = false;'); return n; },
-    warn: (m) => { if (!G.warns.includes(m)) G.warns.push(m); },
+    warn: (m) => { m = tr(m); if (!G.warns.includes(m)) G.warns.push(m); },
     v(id, kind) {
       const info = state.variables.find((x) => x.id === id);
-      if (!info) { this.warn('有積木用到已經刪除的' + (kind === 'list' ? '清單' : '變數')); return 'undefined'; }
+      if (!info) { this.warn(tr(kind === 'list' ? '有積木用到已經刪除的清單' : '有積木用到已經刪除的變數')); return 'undefined'; }
       G.varUsed.add(id);
       return G.varMap.get(id);
     },
@@ -2585,6 +4213,7 @@ function genBlock(G, b, d) {
   (d.helpers || []).forEach((x) => G.helpers.add(x));
   (d.grants || []).forEach((x) => G.grants.add(x));
   if (d.connect) G.connect = true;
+  if (d.noframes) G.noframes = true;   // 會嵌入網頁的腳本不要在被嵌入的小框架裡再執行一次
   if (d.ext) G.exts.add(d.ext);
   const a = {}, r = {};
   for (const [name, spec] of Object.entries(d.args)) {
@@ -2598,12 +4227,12 @@ function argCode(G, b, name, spec, d) {
   const v = b.args[name];
   if (v && typeof v === 'object') {
     const sd = DEFS[v.op];
-    if (!sd || !isValueType(sd.type)) { G.warns.push('有未知的積木被略過'); return 'undefined'; }
+    if (!sd || !isValueType(sd.type)) { G.warns.push(tr('有未知的積木被略過')); return 'undefined'; }
     const code = genBlock(G, v, sd);
     return (spec.k === 'num' && sd.rt !== 'num') ? 'Number(' + code + ')' : code;
   }
   switch (spec.k) {
-    case 'bool': { const m = '「' + labelText(b, d) + '」的條件還沒放入'; if (!G.warns.includes(m)) G.warns.push(m); return 'false'; }
+    case 'bool': { const m = trf('「{0}」的條件還沒放入', labelText(b, d)); if (!G.warns.includes(m)) G.warns.push(m); return 'false'; }
     case 'num': case 'pnum': return numLit(v);
     case 'any': return anyLit(v);
     default: return q(v == null ? '' : String(v));
@@ -2613,7 +4242,7 @@ function genStack(G, b) {
   const out = [];
   for (; b; b = b.next) {
     const d = DEFS[b.op];
-    if (!d) { if (!G.warns.includes('有未知的積木被略過')) G.warns.push('有未知的積木被略過'); continue; }
+    if (!d) { if (!G.warns.includes(tr('有未知的積木被略過'))) G.warns.push(tr('有未知的積木被略過')); continue; }
     if (d.type === 'hat' && out.length) continue;   // 事件積木不能放在中間
     const code = genBlock(G, b, d);
     if (code == null || code === '') continue;
@@ -2643,7 +4272,7 @@ function buildHeader(G) {
   m.excludes.forEach((x) => add('exclude', x));
   add('icon', iconUrl(m.icon));
   add('run-at', m.runAt);
-  if (m.noframes) lines.push('// @noframes');
+  if (m.noframes || G.noframes) lines.push('// @noframes');
   const grants = [...new Set([...G.grants, ...(m.grants || [])])].sort();
   if (grants.length) grants.forEach((g) => add('grant', g)); else add('grant', 'none');
   if (G.connect) add('connect', '*');
@@ -2651,16 +4280,25 @@ function buildHeader(G) {
   lines.push('// ==/UserScript==');
   return lines.join('\n');
 }
+/** 工具函式裡的中文註解，依介面語言翻譯（只翻註解，不動程式） */
+function localizeComments(code) {
+  if (!I18N.dict) return code;
+  return code
+    .replace(/(^|[ \t])\/\/ ([^\n]*[\u3400-\u9fff][^\n]*)$/gm, (m, pre, text) => pre + '// ' + tr(text))
+    .replace(/\/\* ([^*\n]*[\u3400-\u9fff][^*\n]*) \*\//g, (m, text) => '/* ' + tr(text) + ' */')
+    // 會顯示在網頁或主控台的提示文字（單引號字串）
+    .replace(/'([^'\\\n]*[\u3400-\u9fff][^'\\\n]*)'/g, (m, text) => "'" + tr(text).replace(/'/g, "\\'") + "'");
+}
 function collectHelperCode(set) {
   const order = [], seen = new Set();
   const visit = (n) => { if (seen.has(n) || !HELP[n]) return; seen.add(n); HELP[n].deps.forEach(visit); order.push(n); };
   [...set].forEach(visit);
   const codes = [], seenCode = new Set();
-  order.forEach((n) => { const c = HELP[n].code; if (!seenCode.has(c)) { seenCode.add(c); codes.push(c); } });
+  order.forEach((n) => { const c = localizeComments(HELP[n].code); if (!seenCode.has(c)) { seenCode.add(c); codes.push(c); } });
   return codes;
 }
 function genExtSource(e) {
-  return '// ===== 擴充積木：' + e.name + ' =====\nconst ' + extIdent(e.id) + ' = (() => {\n  let instance = null;\n  const Scratch = __makeScratch((i) => { instance = i; });\n  {\n' +
+  return trf('// ===== 擴充積木：{0} =====', e.name) + '\nconst ' + extIdent(e.id) + ' = (() => {\n  let instance = null;\n  const Scratch = __makeScratch((i) => { instance = i; });\n  {\n' +
     e.code.replace(/\s+$/, '') + '\n  }\n  return instance;\n})();';
 }
 function scanExtGrants(code) {
@@ -2672,7 +4310,7 @@ function scanExtGrants(code) {
 }
 function embedBlock() {
   const b64 = utf8ToB64(JSON.stringify(serializeProject()));
-  const lines = ['', '// ==TM-BLOCKS-PROJECT== 這是積木編輯器的專案資料，請勿修改。可在編輯器「專案 → 開啟」重新匯入這個腳本。'];
+  const lines = ['', '// ==TM-BLOCKS-PROJECT== ' + tr('這是積木編輯器的專案資料，請勿修改。可在編輯器「專案 → 開啟」重新匯入這個腳本。')];
   for (let i = 0; i < b64.length; i += 100) lines.push('// ' + b64.slice(i, i + 100));
   lines.push('// ==/TM-BLOCKS-PROJECT==');
   return lines.join('\n');
@@ -2700,7 +4338,7 @@ function generateScript(opts) {
   let orphans = 0, hats = 0;
   state.scripts.forEach((s) => {
     const head = s.stack, d = head && DEFS[head.op];
-    if (!d) { G.warns.push('有未知的積木被略過'); return; }
+    if (!d) { G.warns.push(tr('有未知的積木被略過')); return; }
     if (d.type !== 'hat') { if (!isValueType(d.type)) orphans++; return; }
     G.loops = [];
     hats++;
@@ -2710,15 +4348,15 @@ function generateScript(opts) {
   });
   // 「當腳本啟動時」會馬上執行，先把其他事件都登記好，才不會漏掉它廣播的訊息
   scripts.sort((x, y) => (x.immediate ? 1 : 0) - (y.immediate ? 1 : 0));
-  if (orphans) G.warns.push(orphans + ' 組積木沒有接在事件積木下面，不會被匯出');
+  if (orphans) G.warns.push(trf('{0} 組積木沒有接在事件積木下面，不會被匯出', orphans));
   const names = new Map();
   state.scripts.forEach((s) => { if (s.stack && s.stack.op === 'hat_func') { const n = String(s.stack.args.NAME || '').trim(); names.set(n, (names.get(n) || 0) + 1); } });
-  names.forEach((cnt, n) => { if (cnt > 1) G.warns.push('有 ' + cnt + ' 個函式都叫「' + n + '」，只有第一個會生效'); });
+  names.forEach((cnt, n) => { if (cnt > 1) G.warns.push(trf('有 {0} 個函式都叫「{1}」，只有第一個會生效', cnt, n)); });
 
   const usedExts = state.extensions.filter((e) => G.exts.has(e.id));
   usedExts.forEach((e) => scanExtGrants(e.code).forEach((g) => G.grants.add(g)));
   const missing = [...G.exts].filter((id) => !state.extensions.some((e) => e.id === id));
-  if (missing.length) G.warns.push('找不到擴充積木「' + missing.join('、') + '」的程式碼');
+  if (missing.length) G.warns.push(trf('找不到擴充積木「{0}」的程式碼', missing.join(', ')));
 
   const out = [buildHeader(G), ''];
   if (usedExts.length) {
@@ -2728,17 +4366,17 @@ function generateScript(opts) {
   const decl = state.variables.filter((v) => G.varUsed.has(v.id)).map((v) => (v.kind === 'list' ? 'const ' : 'let ') + G.varMap.get(v.id) + (v.kind === 'list' ? ' = [];' : ' = 0;'));
   const body = [];
   const helperCodes = collectHelperCode(G.helpers);
-  if (helperCodes.length) body.push('// ===== 工具函式（積木會用到的）=====\n' + helperCodes.join('\n\n'));
-  if (decl.length || G.extra.length) body.push('// ===== 變數與清單 =====\n' + decl.concat(G.extra).join('\n'));
-  if (funcs.length) body.push('// ===== 函式 =====\n' + funcs.join('\n\n'));
-  body.push('// ===== 腳本 =====\n' + (scripts.length ? scripts.map((x) => x.code).join('\n\n') : '// （還沒有任何事件積木。請從「事件」分類拖一個積木到工作區）'));
+  if (helperCodes.length) body.push(tr('// ===== 工具函式（積木會用到的）=====') + '\n' + helperCodes.join('\n\n'));
+  if (decl.length || G.extra.length) body.push(tr('// ===== 變數與清單 =====') + '\n' + decl.concat(G.extra).join('\n'));
+  if (funcs.length) body.push(tr('// ===== 函式 =====') + '\n' + funcs.join('\n\n'));
+  body.push(tr('// ===== 腳本 =====') + '\n' + (scripts.length ? scripts.map((x) => x.code).join('\n\n') : tr('// （還沒有任何事件積木。請從「事件」分類拖一個積木到工作區）')));
   out.push('(function () {', "  'use strict';", '', ind(body.join('\n\n')), '})();');
-  out.push(opts.embed ? embedBlock() : '\n// （匯出時會在檔案最後附上專案資料，之後可以用「專案 → 開啟」把這個腳本重新匯入編輯）');
+  out.push(opts.embed ? embedBlock() : '\n' + tr('// （匯出時會在檔案最後附上專案資料，之後可以用「專案 → 開啟」把這個腳本重新匯入編輯）'));
   const code = out.join('\n') + '\n';
-  if (!state.meta.matches.length) G.warns.push('還沒有設定「套用網址」，已先用所有網站（*://*/*）');
+  if (!state.meta.matches.length) G.warns.push(tr('還沒有設定「套用網址」，已先用所有網站（*://*/*）'));
   if (typeof Function === 'function') {
     try { new Function(code); }
-    catch (e) { if (e instanceof SyntaxError) G.warns.push('產生的程式碼有語法錯誤（' + e.message + '）。請檢查自訂的 JavaScript 積木或擴充積木。'); }
+    catch (e) { if (e instanceof SyntaxError) G.warns.push(trf('產生的程式碼有語法錯誤（{0}）。請檢查自訂的 JavaScript 積木或擴充積木。', e.message)); }
   }
   return { code, warns: G.warns, stats: { hats, orphans, helpers: helperCodes.length } };
 }
@@ -2759,7 +4397,7 @@ const reEsc = (s) => String(s).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 function createLiteralParser(src) {
   let i = 0, env = {};
   const line = () => src.slice(0, i).split('\n').length;
-  const fail = (m) => { throw new Error(m + '（約在第 ' + line() + ' 行）'); };
+  const fail = (m) => { throw new Error(tr(m) + trf('（約在第 {0} 行）', line())); };
   const idStart = (c) => c !== undefined && /[\p{L}_$]/u.test(c);
   const idPart = (c) => c !== undefined && /[\p{L}\p{N}_$]/u.test(c);
   const ROOT = { Scratch: { BlockType: EXT_BLOCK_TYPES, ArgumentType: EXT_ARG_TYPES }, BlockType: EXT_BLOCK_TYPES, ArgumentType: EXT_ARG_TYPES };
@@ -2839,9 +4477,9 @@ function createLiteralParser(src) {
     let cur;
     if (Object.prototype.hasOwnProperty.call(env, head)) cur = env[head];
     else if (Object.prototype.hasOwnProperty.call(ROOT, head)) cur = ROOT[head];
-    else fail('無法解析「' + path.join('.') + '」。積木描述裡請直接寫出文字或數字');
+    else fail(trf('無法解析「{0}」。積木描述裡請直接寫出文字或數字', path.join('.')));
     for (let k = 1; k < path.length; k++) {
-      if (cur == null || !(path[k] in Object(cur))) fail('無法解析「' + path.join('.') + '」');
+      if (cur == null || !(path[k] in Object(cur))) fail(trf('無法解析「{0}」', path.join('.')));
       cur = cur[path[k]];
     }
     return cur;
@@ -2880,7 +4518,7 @@ function createLiteralParser(src) {
         if (v && typeof v === 'object' && 'default' in v) v = v.default;
         return v;
       }
-      fail('不支援呼叫 ' + path.join('.') + '()，積木描述裡請直接寫出文字或數字');
+      fail(trf('不支援呼叫 {0}()，積木描述裡請直接寫出文字或數字', path.join('.')));
     }
     return resolvePath(path);
   }
@@ -2911,7 +4549,7 @@ function createLiteralParser(src) {
       return sign * Number(m[0]);
     }
     if (idStart(c)) return identExpr();
-    return fail('不支援的寫法：' + src.slice(i, i + 12).replace(/\s+/g, ' '));
+    return fail(trf('不支援的寫法：{0}', src.slice(i, i + 12).replace(/\s+/g, ' ')));
   }
   function value() {
     let v = primary();
@@ -2939,7 +4577,7 @@ function createLiteralParser(src) {
       else if (src[i] === '(') { skipBalanced(); ws(); if (src[i] === '{') skipBalanced(); o[key] = FN_MARK; }
       else if (src[i] === ',' || src[i] === '}') {
         if (Object.prototype.hasOwnProperty.call(env, key)) o[key] = env[key];
-        else fail('找不到變數「' + key + '」的內容');
+        else fail(trf('找不到變數「{0}」的內容', key));
       } else fail('物件格式不正確');
       ws();
       if (src[i] === ',') { i++; continue; }
@@ -2983,39 +4621,40 @@ function parseReturnLiteral(P, code, bodyStart, env) {
     try { return P.parseAt(m.index + m[0].length, env).value; }
     catch (e) { if (!firstErr) firstErr = e; }
   }
-  throw firstErr || new Error('在方法裡找不到 return');
+  throw firstErr || new Error(tr('在方法裡找不到 return'));
 }
 function extractExtInfo(code) {
-  if (!/\bextensions\s*\.\s*register\s*\(/.test(code)) throw new Error('找不到 Scratch.extensions.register(…)。擴充程式最後需要呼叫它來註冊。');
+  if (!/\bextensions\s*\.\s*register\s*\(/.test(code)) throw new Error(tr('找不到 Scratch.extensions.register(…)。擴充程式最後需要呼叫它來註冊。'));
   const P = createLiteralParser(code);
   const env = {};
   const re = /\b(?:const|let|var)\s+([A-Za-z_$][\w$]*)\s*=\s*/g;
   let m;
   while ((m = re.exec(code))) { try { env[m[1]] = P.parseAt(m.index + m[0].length, env).value; } catch (e) { /* 不是單純資料，略過 */ } }
   const at = findMethodStart(code, 'getInfo');
-  if (at < 0) throw new Error('找不到 getInfo() 方法。擴充需要用 getInfo() 描述有哪些積木。');
+  if (at < 0) throw new Error(tr('找不到 getInfo() 方法。擴充需要用 getInfo() 描述有哪些積木。'));
   let info;
   try { info = parseReturnLiteral(P, code, at, env); }
-  catch (e) { throw new Error('無法讀取 getInfo() 裡的積木描述：' + e.message + '\n\n提示：getInfo() 最好直接 return 一個寫明文字與數字的物件（TurboWarp 官方範例的寫法）。'); }
-  if (!info || typeof info !== 'object' || Array.isArray(info)) throw new Error('getInfo() 必須回傳一個物件。');
+  catch (e) { throw new Error(trf('無法讀取 getInfo() 裡的積木描述：{0}\n\n提示：getInfo() 最好直接 return 一個寫明文字與數字的物件（TurboWarp 官方範例的寫法）。', e.message)); }
+  if (!info || typeof info !== 'object' || Array.isArray(info)) throw new Error(tr('getInfo() 必須回傳一個物件。'));
   return { info, P, env };
 }
 
-function menuItems(m, code, P, env) {
+function menuItems(m, code, P, env, loc) {
   let items = Array.isArray(m) ? m : (m && m.items);
   if (typeof items === 'string') {
     try { const at = findMethodStart(code, items); items = at >= 0 ? parseReturnLiteral(P, code, at, env) : []; } catch (e) { items = []; }
   }
   if (!Array.isArray(items)) return [];
-  return items.filter((x) => x != null && x !== FN_MARK).map((x) => (x && typeof x === 'object' ? [String(x.text != null ? x.text : x.value), x.value != null ? x.value : x.text] : [String(x), x]));
+  const L = (t) => (loc ? tr(String(t)) : String(t));
+  return items.filter((x) => x != null && x !== FN_MARK).map((x) => (x && typeof x === 'object' ? [L(x.text != null ? x.text : x.value), x.value != null ? x.value : x.text] : [L(x), x]));
 }
 
 /** 解析擴充程式碼，回傳 {id,name,color,defs,items,notes}，不修改任何全域狀態 */
-function parseExtension(code, colorIndex = 0) {
+function parseExtension(code, colorIndex = 0, loc = false) {
   const { info, P, env } = extractExtInfo(code);
   const id = String(info.id == null ? '' : info.id).trim();
-  if (!id) throw new Error('getInfo() 裡需要有 id（例如 id: \'myblocks\'）。');
-  const name = String(info.name == null ? id : info.name);
+  if (!id) throw new Error(tr('getInfo() 裡需要有 id（例如 id: \'myblocks\'）。'));
+  const name = loc ? tr(String(info.name == null ? id : info.name)) : String(info.name == null ? id : info.name);
   const color = /^#[\da-f]{6}$/i.test(String(info.color1 || '')) ? info.color1 : EXT_COLORS[colorIndex % EXT_COLORS.length];
   const menus = info.menus && typeof info.menus === 'object' ? info.menus : {};
   const defs = [], items = [], notes = [];
@@ -3028,11 +4667,12 @@ function parseExtension(code, colorIndex = 0) {
     if (bt === 'label') { items.push({ kind: 'label', text: String(blk.text == null ? '' : blk.text) }); return; }
     if (bt === 'button' || bt === 'xml') return;
     const opcode = String(blk.opcode == null ? '' : blk.opcode).trim();
-    if (!['command', 'reporter', 'Boolean'].includes(bt)) { if (opcode) notes.push('略過「' + opcode + '」：暫不支援 ' + (bt || '未知') + ' 類型的積木'); return; }
+    if (!['command', 'reporter', 'Boolean'].includes(bt)) { if (opcode) notes.push(trf('略過「{0}」：暫不支援 {1} 類型的積木', opcode, bt || tr('未知'))); return; }
     if (!opcode) return;
     if (blk.hideFromPalette) return;
     let text = Array.isArray(blk.text) ? blk.text[0] : blk.text;
     text = String(text == null ? opcode : text);
+    if (loc) text = tr(text);
     const labels = [], argNames = [];
     let last = 0, mm;
     const re = /\[([^\[\]]+)\]/g;
@@ -3048,8 +4688,8 @@ function parseExtension(code, colorIndex = 0) {
     argNames.forEach((n) => {
       const a = aInfo[n] && typeof aInfo[n] === 'object' ? aInfo[n] : {};
       const dv = (a.defaultValue != null && typeof a.defaultValue !== 'object') ? a.defaultValue : undefined;
-      const opts = a.menu && menus[a.menu] ? menuItems(menus[a.menu], code, P, env) : [];
-      if (opts.length) argSpecs[n] = { k: 'dd', o: opts, d: dv !== undefined ? dv : opts[0][1] };
+      const opts = a.menu && menus[a.menu] ? menuItems(menus[a.menu], code, P, env, loc) : [];
+      if (opts.length) argSpecs[n] = { k: 'dd', o: opts, d: dv !== undefined ? dv : opts[0][1], nt: true };
       else if (a.type === 'number') argSpecs[n] = N(dv !== undefined ? dv : 0);
       else if (a.type === 'Boolean') argSpecs[n] = BOOL();
       else if (a.type === 'color') argSpecs[n] = COL(typeof dv === 'string' && /^#/.test(dv) ? dv : '#ff0000');
@@ -3063,17 +4703,17 @@ function parseExtension(code, colorIndex = 0) {
       const call = 'await ' + ev + prop(opcode) + '({ ' + argNames.map((n) => key(n) + ': ' + a[n]).join(', ') + ' }, {})';
       return type === 'stack' ? call + ';' : '(' + call + ')';
     };
-    if (!new RegExp('(?:^|[\\s;{},.])(?:async\\s+)?' + reEsc(opcode) + '\\s*[(=:]').test(code)) notes.push('「' + opcode + '」找不到對應的方法，匯出後執行這個積木會出錯');
+    if (!new RegExp('(?:^|[\\s;{},.])(?:async\\s+)?' + reEsc(opcode) + '\\s*[(=:]').test(code)) notes.push(trf('「{0}」找不到對應的方法，匯出後執行這個積木會出錯', opcode));
     defs.push({ op, cat: 'x:' + id, type, args: argSpecs, gen, labelRaw: [text], labels: [labels], nsub: 0, rt: type === 'boolean' ? 'bool' : (type === 'reporter' ? 'any' : null), ext: id });
     items.push({ kind: 'block', op });
   });
-  if (!defs.length) throw new Error('這個擴充裡沒有可以用的積木（支援指令、數值、條件三種類型）。');
+  if (!defs.length) throw new Error(tr('這個擴充裡沒有可以用的積木（支援指令、數值、條件三種類型）。'));
   return { id, name, color, defs, items, notes, tip: '自訂積木（來自你匯入的 JavaScript）。' };
 }
 
 function registerExtension(code, opts = {}) {
   const existing = state.extensions.findIndex((e) => parseIdOnly(code) === e.id);
-  const parsed = parseExtension(code, existing >= 0 ? existing : state.extensions.length);
+  const parsed = parseExtension(code, existing >= 0 ? existing : state.extensions.length, isSampleCode(code));
   const old = state.extensions.find((e) => e.id === parsed.id);
   if (old) old.ops.forEach((op) => { delete DEFS[op]; });
   parsed.defs.forEach((d) => { DEFS[d.op] = d; });
@@ -3083,6 +4723,16 @@ function registerExtension(code, opts = {}) {
   syncExtCats();
   return { ext: rec, replaced: !!old };
 }
+/** 範例擴充的程式碼：積木文字、選單、預設值與註解會依介面語言翻譯（程式本身不變） */
+function sampleCode(s) {
+  if (!I18N.dict) return s.code;
+  return s.code
+    .replace(/(['"])((?:\\.|(?!\1)[^\\\n])*[\u3400-\u9fff](?:\\.|(?!\1)[^\\\n])*)\1/g, (m, q2, body) => q2 + tr(body).replace(new RegExp('(?<!\\\\)' + q2, 'g'), '\\' + q2) + q2)
+    .replace(/^(\s*\/\/ )(.*[\u3400-\u9fff].*)$/gm, (m, pre, text) => pre + tr(text));
+}
+const isSampleCode = (code) => EXT_SAMPLES.some((x) => x.code === code || sampleCode(x) === code);
+/** 介面語言改變時，重新讀取自訂積木（範例擴充的積木文字會跟著翻譯） */
+function refreshExtensions() { state.extensions.slice().forEach((e) => { try { registerExtension(e.code); } catch (err) { /* 保持原樣 */ } }); }
 function parseIdOnly(code) { try { const { info } = extractExtInfo(code); return String(info.id || '').trim(); } catch (e) { return null; } }
 function unregisterExtension(id) {
   const i = state.extensions.findIndex((e) => e.id === id);
@@ -3265,7 +4915,7 @@ const EXT_SAMPLES = [
         menus: {
           formats: {
             acceptReporters: false,
-            items: ['2026-10-11', '10/11', '星期幾']
+            items: ['2026-10-11', '10/11', { text: '星期幾', value: 'weekday' }]
           }
         },
         blocks: [
@@ -3293,7 +4943,7 @@ const EXT_SAMPLES = [
       const d = new Date();
       const pad = (n) => String(n).padStart(2, '0');
       if (args.FORMAT === '10/11') return pad(d.getMonth() + 1) + '/' + pad(d.getDate());
-      if (args.FORMAT === '星期幾') return '星期' + '日一二三四五六'[d.getDay()];
+      if (args.FORMAT === 'weekday') return d.toLocaleDateString(undefined, { weekday: 'long' });
       return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate());
     }
 
@@ -3318,12 +4968,13 @@ function buildExtTemplate({ name, kind, text, id }) {
   const bt = { command: 'COMMAND', reporter: 'REPORTER', boolean: 'BOOLEAN' }[kind] || 'REPORTER';
   const argLines = argNames.map((n) => "              " + q(n) + ": { type: Scratch.ArgumentType.STRING, defaultValue: '' }").join(',\n');
   const argsBlock = argNames.length ? "            arguments: {\n" + argLines + "\n            }\n" : '';
+  const first = argNames[0] ? '[' + q(argNames[0]) + ']' : '.VALUE';
   const ret = kind === 'command'
-    ? "      // 在這裡寫下積木要做的事。args." + (argNames[0] || '參數') + " 就是使用者填入的值\n      console.log(args);\n"
+    ? "      // " + trf('在這裡寫下積木要做的事。args.{0} 就是使用者填入的值', argNames[0] || tr('參數')) + "\n      console.log(args);\n"
     : kind === 'boolean'
-      ? "      // 回傳 true（成立）或 false（不成立）\n      return String(args" + (argNames[0] ? '[' + q(argNames[0]) + ']' : '.VALUE') + ").length > 0;\n"
-      : "      // 回傳這個積木的結果\n      return String(args" + (argNames[0] ? '[' + q(argNames[0]) + ']' : '.VALUE') + ") + '！';\n";
-  return "// " + name + " — 自訂積木範本（寫法相容 TurboWarp 擴充）\n(function (Scratch) {\n  'use strict';\n\n  class MyBlocks {\n    getInfo() {\n      return {\n        id: " + q(id) + ",\n        name: " + q(name) + ",\n        color1: '#e8590c',\n        blocks: [\n          {\n            opcode: 'myBlock',\n            blockType: Scratch.BlockType." + bt + ",\n            text: " + q(text) + (argNames.length ? ',\n' : '\n') + argsBlock + "          }\n        ]\n      };\n    }\n\n    // 方法名稱要跟上面的 opcode 一樣\n    async myBlock(args) {\n" + ret + "    }\n  }\n\n  Scratch.extensions.register(new MyBlocks());\n})(Scratch);\n";
+      ? "      // " + tr('回傳 true（成立）或 false（不成立）') + "\n      return String(args" + first + ").length > 0;\n"
+      : "      // " + tr('回傳這個積木的結果') + "\n      return String(args" + first + ") + '!';\n";
+  return "// " + trf('{0} — 自訂積木範本（寫法相容 TurboWarp 擴充）', name) + "\n(function (Scratch) {\n  'use strict';\n\n  class MyBlocks {\n    getInfo() {\n      return {\n        id: " + q(id) + ",\n        name: " + q(name) + ",\n        color1: '#e8590c',\n        blocks: [\n          {\n            opcode: 'myBlock',\n            blockType: Scratch.BlockType." + bt + ",\n            text: " + q(text) + (argNames.length ? ',\n' : '\n') + argsBlock + "          }\n        ]\n      };\n    }\n\n    // " + tr('方法名稱要跟上面的 opcode 一樣') + "\n    async myBlock(args) {\n" + ret + "    }\n  }\n\n  Scratch.extensions.register(new MyBlocks());\n})(Scratch);\n";
 }
 
 /* =====================================================================
@@ -3334,7 +4985,7 @@ const blockIndex = new Map();   // 工作區：id → 積木
 const palBlocks = new Map();    // 積木庫：id → 積木
 const hist = { undo: [], redo: [], last: null };
 
-const labelPlain = (d) => d.labels[0].map((p) => (p.t === 'text' ? p.v : ' ')).join('').replace(/\s+/g, ' ').trim();
+const labelPlain = (d) => (d.labels[0].map((p) => (p.t === 'text' ? p.v : ' ')).join('') + ' ' + String(d.labelRaw[0]).replace(/\{\w+\}/g, ' ')).replace(/\s+/g, ' ').trim();
 const slotAccepts = (spec, vd) => {
   if (!isValueType(vd.type)) return false;
   if (spec.k === 'bool') return vd.type === 'boolean';
@@ -3353,7 +5004,7 @@ function setColors(el, color) {
 /** mode: false(工作區) | 'pal'(積木庫) | 'ghost'(拖曳中) */
 function renderBlock(b, mode) {
   const d = DEFS[b.op];
-  if (!d) return h('div', { class: 'blk unknown', dataset: { bid: b.id }, text: '未知積木：' + b.op });
+  if (!d) return h('div', { class: 'blk unknown', dataset: { bid: b.id }, text: trf('未知積木：{0}', b.op) });
   if (mode === 'pal') palBlocks.set(b.id, b); else if (!mode) blockIndex.set(b.id, b);
   const el = h('div', { class: 'blk ' + d.type + (d.cap ? (d.type === 'c' ? ' nobump' : ' cap') : ''), dataset: { bid: b.id } });
   setColors(el, catById(d.cat).color);
@@ -3400,7 +5051,8 @@ function renderArg(b, d, name, mode) {
   }
   if (spec.k === 'bool') return h('span', { class: 'slot bool empty', dataset: { bid: b.id, arg: name } });
   if (spec.k === 'dd') {
-    const el = h('span', { class: 'dd', role: 'button', dataset: { bid: b.id, arg: name }, text: ddLabel(spec, v) });
+    const el = h('span', { class: 'dd', role: 'button', dataset: { bid: b.id, arg: name } });
+    el.textContent = ddLabel(spec, v);   // 變數、函式名稱是使用者自己的內容，不經過翻譯
     if (!mode) el.addEventListener('click', () => openDDMenu(el, b, name, spec));
     return el;
   }
@@ -3445,7 +5097,7 @@ function openDDMenu(anchor, b, name, spec) {
     return;
   }
   openMenu(anchor, opts.map(([label, value]) => ({
-    label, value, on: String(value) === String(b.args[name]),
+    label, value, raw: true, on: String(value) === String(b.args[name]),
     onPick: (val) => { b.args[name] = val; refreshDDLabels(); commit(); },
   })));
 }
@@ -3509,6 +5161,7 @@ function renderWorkspace(opts = {}) {
   fitWorkspace(opts.keepSize);
   $('#emptyHint').style.display = state.scripts.length ? 'none' : '';
   updateSelBar();
+  if (find.open) applyFind(true);
 }
 function fitWorkspace(keep) {
   const inner = $('#wsInner'), ws = $('#ws');
@@ -3632,6 +5285,8 @@ function openBlockMenu(anchor) {
     { sep: true },
     { label: '刪除這個積木', onPick: () => deleteSelected(false) },
     stackLike ? { label: '刪除這個積木和它下面的全部', onPick: () => deleteSelected(true) } : null,
+    d.palette === false ? null : { sep: true },
+    d.palette === false ? null : { label: isFav(b.op) ? '取消收藏這種積木' : '收藏這種積木', onPick: () => { setFav(b.op, !isFav(b.op)); renderPalette(); } },
   ].filter(Boolean), { alignRight: true });
 }
 
@@ -3674,11 +5329,11 @@ async function createVariable(kind) {
   if (name == null) return;
   const n = name.trim();
   if (!n) { notify('名稱不能是空的'); return; }
-  if (state.variables.some((v) => v.name === n)) { notify('已經有叫「' + n + '」的' + (state.variables.find((v) => v.name === n).kind === 'list' ? '清單' : '變數') + '了'); return; }
+  if (state.variables.some((v) => v.name === n)) { notify(trf(state.variables.find((v) => v.name === n).kind === 'list' ? '已經有叫「{0}」的清單了' : '已經有叫「{0}」的變數了', n)); return; }
   state.variables.push({ id: newVarId(), name: n, kind: isList ? 'list' : 'var' });
   renderPalette();
   commit();
-  notify('已建立「' + n + '」');
+  notify(trf('已建立「{0}」', n));
 }
 async function renameVariable(id) {
   const v = state.variables.find((x) => x.id === id);
@@ -3695,7 +5350,7 @@ async function deleteVariable(id) {
   if (!v) return;
   let uses = 0;
   walkAll((b) => { if (usesVar(b, id)) uses++; });
-  if (uses && !(await uiConfirm({ title: '刪除「' + v.name + '」', message: '有 ' + uses + ' 個積木正在使用它，刪除後這些積木也會一起移除。要繼續嗎？', okText: '刪除', danger: true }))) return;
+  if (uses && !(await uiConfirm({ title: trf('刪除「{0}」', v.name), message: trf('有 {0} 個積木正在使用它，刪除後這些積木也會一起移除。要繼續嗎？', uses), okText: '刪除', danger: true }))) return;
   deleteBlocksWhere((b) => usesVar(b, id));
   state.variables = state.variables.filter((x) => x.id !== id);
   renderWorkspace(); renderPalette(); commit();
@@ -3705,13 +5360,13 @@ async function createFunction() {
   if (name == null) return;
   const n = name.trim();
   if (!n) { notify('名稱不能是空的'); return; }
-  if (funcNames().includes(n)) { notify('已經有叫「' + n + '」的函式了'); return; }
+  if (funcNames().includes(n)) { notify(trf('已經有叫「{0}」的函式了', n)); return; }
   const b = mkBlock('hat_func', { NAME: n });
   const p = freeSpot();
   state.scripts.push({ x: p.x, y: p.y, stack: b });
   view.selected = b.id;
   renderWorkspace(); scrollBlockIntoView(b.id); renderPalette(); commit();
-  notify('已建立函式「' + n + '」，把要重複使用的積木接在它下面');
+  notify(trf('已建立函式「{0}」，把要重複使用的積木接在它下面', n));
 }
 
 /* ---------- 積木庫 ---------- */
@@ -3734,7 +5389,7 @@ function renderCats() {
 }
 function palAdd(list, op, args) {
   const b = mkBlock(op, args);
-  const item = h('div', { class: 'pal-item', dataset: { op } }, renderBlock(b, 'pal'));
+  const item = h('div', { class: 'pal-item', dataset: { op } }, renderBlock(b, 'pal'), favBtn(op));
   list.append(item);
   return item;
 }
@@ -3751,10 +5406,10 @@ function renderPalette() {
     let n = 0;
     Object.values(DEFS).forEach((d) => {
       if (d.palette === false || n >= 60) return;
-      const hay = (labelPlain(d) + ' ' + d.op + ' ' + catById(d.cat).name).toLowerCase();
+      const hay = (labelPlain(d) + ' ' + d.op + ' ' + catById(d.cat).name + ' ' + tr(catById(d.cat).name)).toLowerCase();
       if (hay.includes(qs)) { palAdd(list, d.op); n++; }
     });
-    if (!n) list.append(h('div', { class: 'pal-empty', text: '找不到「' + view.search + '」相關的積木。試試比較短的關鍵字，例如「點擊」或「文字」。' }));
+    if (!n) list.append(h('div', { class: 'pal-empty', text: trf('找不到「{0}」相關的積木。試試比較短的關鍵字，例如「點擊」或「文字」。', view.search) }));
     return;
   }
   const cat = catById(view.cat);
@@ -3774,12 +5429,18 @@ function renderPalette() {
       const b = mkBlock(v.kind === 'list' ? 'list_ref' : 'var_get', v.kind === 'list' ? { LIST: v.id } : { NAME: v.id });
       list.append(h('div', { class: 'var-row' },
         h('div', { class: 'pal-item', dataset: { op: b.op } }, renderBlock(b, 'pal')),
-        h('button', { class: 'btn sm flat', title: '重新命名', 'aria-label': '重新命名 ' + v.name, text: '✎', onclick: () => renameVariable(v.id) }),
-        h('button', { class: 'btn sm flat', title: '刪除', 'aria-label': '刪除 ' + v.name, text: '✕', onclick: () => deleteVariable(v.id) })));
+        h('button', { class: 'btn sm flat', title: '重新命名', 'aria-label': trf('重新命名 {0}', v.name), text: '✎', onclick: () => renameVariable(v.id) }),
+        h('button', { class: 'btn sm flat', title: '刪除', 'aria-label': trf('刪除 {0}', v.name), text: '✕', onclick: () => deleteVariable(v.id) })));
     });
     list.append(h('div', { class: 'pal-label', text: '操作' }));
   } else if (cat.id === 'func') {
     list.append(h('div', { class: 'pal-btns' }, h('button', { class: 'btn sm', text: '＋ 建立函式', onclick: createFunction })));
+  } else if (cat.id === 'fav') {
+    const ops = favOps.filter((op) => DEFS[op] && DEFS[op].palette !== false);
+    if (!ops.length) list.append(h('div', { class: 'pal-empty', text: '還沒有收藏。點積木右邊的 ☆，常用的積木就會放在這裡。' }));
+    ops.forEach((op) => palAdd(list, op));
+    if (same) list.scrollTop = keep;
+    return;
   } else if (cat.ext) {
     const e = state.extensions.find((x) => 'x:' + x.id === cat.id);
     if (e) {
@@ -4151,7 +5812,7 @@ async function doCopy() {
 async function doDownload() {
   const res = currentScript();
   const r = await saveFile(fileSafeName(state.meta.name) + '.user.js', res.code, 'text/javascript;charset=utf-8');
-  if (r.ok) notify(r.renamed ? '已儲存為 ' + r.name + '。安裝前請把結尾的 .txt 拿掉，或打開檔案後複製貼上' : '已下載 ' + r.name, 5200);
+  if (r.ok) notify(r.renamed ? trf('已儲存為 {0}。安裝前請把結尾的 .txt 拿掉，或打開檔案後複製貼上', r.name) : trf('已下載 {0}', r.name), 5200);
   else if (r.declined) notify('已取消下載');
   else notify('這裡無法下載檔案，請改用「複製程式碼」', 4200);
 }
@@ -4273,7 +5934,7 @@ function openMeta() {
       const v = String(m.icon || '');
       const embedded = /^data:/i.test(v);
       inp.readOnly = embedded;
-      inp.value = embedded ? '（已選擇的圖片）' : v;
+      inp.value = embedded ? tr('（已選擇的圖片）') : v;
       paint();
     };
     inp.addEventListener('input', () => { m.icon = inp.value.trim(); paint(); touch(); });
@@ -4314,7 +5975,7 @@ function openExamples() {
   const m = openModal({ title: '範例', body: [h('p', { class: 'muted', text: '載入範例後，可以看看積木怎麼組合，再改成自己想要的。' }), list] });
 }
 function loadExample(ex) {
-  const proj = ex.build();
+  const proj = localizeProject(ex.build());
   clearExtensions();
   state.meta = normalizeMeta(proj.meta);
   state.variables = proj.variables || [];
@@ -4325,7 +5986,25 @@ function loadExample(ex) {
   renderCats(); renderPalette(); renderWorkspace();
   $('#ws').scrollTo(0, 0);
   refreshCode();
-  notify('已載入「' + ex.title + '」');
+  notify(trf('已載入「{0}」', tr(ex.title)));
+}
+
+
+/* ---------- 語言 / Language ---------- */
+function applyI18n() {
+  translateStatic();
+  refreshExtensions();
+  renderCats(); renderPalette(); renderWorkspace(); refreshCode(); updateSelBar();
+}
+
+/** 左上角 🌐：選擇介面語言 */
+function openLangMenu(anchor) {
+  openMenu(anchor, [
+    { header: '語言 / Language' },
+    { label: '自動（跟隨瀏覽器）', on: I18N.mode === 'auto', onPick: () => chooseLang('auto') },
+    { label: '繁體中文', raw: true, on: I18N.mode === 'zh-Hant', onPick: () => chooseLang('zh-Hant') },
+    { label: 'English', raw: true, on: I18N.mode === 'en', onPick: () => chooseLang('en') },
+  ]);
 }
 
 /* ---------- 專案 ---------- */
@@ -4359,12 +6038,12 @@ async function openProjectFile(file) {
   if (state.scripts.length && !(await uiConfirm({ title: '開啟專案', message: '目前工作區的積木會被取代。要繼續嗎？', okText: '開啟' }))) return;
   const r = loadProject(obj);
   commit();
-  notify(r.skipped || r.errs.length ? '已開啟，但有 ' + (r.skipped + r.errs.length) + ' 個項目無法還原' : '已開啟「' + state.meta.name + '」', 3600);
+  notify(r.skipped || r.errs.length ? trf('已開啟，但有 {0} 個項目無法還原', r.skipped + r.errs.length) : trf('已開啟「{0}」', state.meta.name), 3600);
 }
 async function saveProjectFile() {
   const json = JSON.stringify(serializeProject(), null, 1);
   const r = await saveFile(fileSafeName(state.meta.name) + '.tmblocks.json', json, 'application/json;charset=utf-8');
-  if (r.ok) notify('已儲存專案檔 ' + r.name, 3600);
+  if (r.ok) notify(trf('已儲存專案檔 {0}', r.name), 3600);
   else if (r.declined) notify('已取消');
   else notify('這裡無法下載檔案。「匯出」的程式碼最後有附專案資料，可以用它重新開啟', 5200);
 }
@@ -4403,10 +6082,10 @@ function openExtDialog(prefill) {
     state.extensions.forEach((e) => {
       const used = (() => { let n = 0; walkAll((b) => { if (b.op.startsWith('x:' + e.id + ':')) n++; }); return n; })();
       listBox.append(h('div', { class: 'item' },
-        h('div', null, h('div', { class: 't', text: e.name }), h('div', { class: 'd', text: e.ops.length + ' 個積木' + (used ? '・工作區用了 ' + used + ' 個' : '') })),
+        h('div', null, h('div', { class: 't', text: e.name }), h('div', { class: 'd', text: used ? trf('{0} 個積木・工作區用了 {1} 個', e.ops.length, used) : trf('{0} 個積木', e.ops.length) })),
         h('button', { class: 'btn sm', text: '編輯程式碼', onclick: () => { ta.value = e.code; status.textContent = ''; ta.scrollIntoView({ block: 'center' }); } }),
         h('button', { class: 'btn sm danger', text: '移除', onclick: async () => {
-          if (used && !(await uiConfirm({ title: '移除「' + e.name + '」', message: '工作區有 ' + used + ' 個這個擴充的積木，移除後也會一併刪除。要繼續嗎？', okText: '移除', danger: true }))) return;
+          if (used && !(await uiConfirm({ title: trf('移除「{0}」', e.name), message: trf('工作區有 {0} 個這個擴充的積木，移除後也會一併刪除。要繼續嗎？', used), okText: '移除', danger: true }))) return;
           unregisterExtension(e.id);
           if (view.cat === 'x:' + e.id) view.cat = 'event';
           view.selected = null;
@@ -4425,28 +6104,28 @@ function openExtDialog(prefill) {
       view.cat = 'x:' + r.ext.id; view.search = ''; $('#palSearch').value = '';
       $('#main').classList.remove('pal-off');
       renderCats(); renderPalette(); renderWorkspace(); commit();
-      notify((r.replaced ? '已更新' : '已加入') + '「' + r.ext.name + '」：' + r.ext.ops.length + ' 個積木', 3600);
+      notify(trf(r.replaced ? '已更新「{0}」：{1} 個積木' : '已加入「{0}」：{1} 個積木', r.ext.name, r.ext.ops.length), 3600);
       m.close();
     } catch (err) {
-      status.append(h('div', { class: 'callout err', text: '無法加入：' + err.message }));
+      status.append(h('div', { class: 'callout err', text: trf('無法加入：{0}', err.message) }));
     }
   };
   addBtn.onclick = doAdd;
-  const samples = h('div', { class: 'chips' }, EXT_SAMPLES.map((s) => h('button', { class: 'chip', type: 'button', title: s.desc, text: s.title, onclick: () => { ta.value = s.code; status.textContent = ''; status.append(h('div', { class: 'callout', text: s.desc + '。按「加入積木」就會出現在積木庫。' })); } })));
+  const samples = h('div', { class: 'chips' }, EXT_SAMPLES.map((s) => h('button', { class: 'chip', type: 'button', title: s.desc, text: s.title, onclick: () => { ta.value = sampleCode(s); status.textContent = ''; status.append(h('div', { class: 'callout', text: trf('{0}。按「加入積木」就會出現在積木庫。', tr(s.desc)) })); } })));
   const fileBtn = h('button', { class: 'btn sm', text: '選擇 .js 檔案', onclick: () => $('#fileExt').click() });
   $('#fileExt').onchange = async (e) => {
     const f = e.target.files && e.target.files[0];
     e.target.value = '';
     if (!f) return;
-    try { ta.value = await readFileText(f); status.textContent = ''; status.append(h('div', { class: 'callout', text: '已讀取「' + f.name + '」。確認內容後按「加入積木」。' })); }
+    try { ta.value = await readFileText(f); status.textContent = ''; status.append(h('div', { class: 'callout', text: trf('已讀取「{0}」。確認內容後按「加入積木」。', f.name) })); }
     catch (err) { status.append(h('div', { class: 'callout err', text: '讀不到這個檔案' })); }
   };
   // 表單產生範本
   const fKind = h('select', null, [['command', '指令（做一件事）'], ['reporter', '數值（回傳一個值）'], ['boolean', '條件（回傳 是／否）']].map(([v, l]) => h('option', { value: v, text: l })));
-  const fName = h('input', { type: 'text', value: '我的積木', autocomplete: 'off' });
+  const fName = h('input', { type: 'text', value: tr('我的積木'), autocomplete: 'off' });
   const fText = h('input', { type: 'text', value: '把 [文字] 加上驚嘆號', autocomplete: 'off' });
   const gen = h('button', { class: 'btn sm', text: '產生範本程式碼', onclick: () => {
-    ta.value = buildExtTemplate({ name: fName.value.trim() || '我的積木', kind: fKind.value, text: fText.value.trim() || '我的積木', id: 'my' + Math.random().toString(36).slice(2, 6) });
+    ta.value = buildExtTemplate({ name: fName.value.trim() || tr('我的積木'), kind: fKind.value, text: fText.value.trim() || tr('我的積木'), id: 'my' + Math.random().toString(36).slice(2, 6) });
     status.textContent = '';
     status.append(h('div', { class: 'callout ok', text: '範本已產生在上方。把 myBlock 方法裡的程式改成你要的功能，再按「加入積木」。' }));
     ta.scrollIntoView({ block: 'center' });
@@ -4480,7 +6159,183 @@ function openExtDialog(prefill) {
   return m;
 }
 
+/* =====================================================================
+   測試：在隔離的小視窗裡試跑目前的腳本，把它做了什麼記錄下來
+   ===================================================================== */
+const TEST_PAGE = '<h1 id="title">測試頁面 Test page</h1>\n<p class="ad" style="background:#ffe08a;padding:8px">廣告 Ad banner</p>\n<p><button id="button">按鈕 Button</button> <input id="name" placeholder="name"> <a href="#top">link</a></p>\n<p id="msg">Hello 你好</p>';
+// 放進測試視窗的小幫手：把 console、錯誤和 GM_ 功能的呼叫記錄下來，傳回編輯器
+const TEST_SHIM = String.raw`(function () {
+  var post = function (level, text) { try { parent.postMessage({ tm: 1, level: level, text: String(text) }, '*'); } catch (e) {} };
+  var fmt = function (a) { return Array.prototype.map.call(a, function (x) { if (typeof x === 'string') return x; try { return JSON.stringify(x); } catch (e) { return String(x); } }).join(' '); };
+  ['log', 'info', 'warn', 'error'].forEach(function (k) { var o = console[k]; console[k] = function () { post(k, fmt(arguments)); try { o.apply(console, arguments); } catch (e) {} }; });
+  addEventListener('error', function (e) { post('error', e.message || e); });
+  addEventListener('unhandledrejection', function (e) { post('error', (e.reason && e.reason.message) || e.reason); });
+  var gm = function (name, text) { post('gm', name + (text ? ' ' + text : '')); };
+  var mem = {}, bar;
+  window.unsafeWindow = window;
+  window.GM_info = { script: { name: 'test' } };
+  window.GM_addStyle = function (css) { var s = document.createElement('style'); s.textContent = css; (document.head || document.documentElement).appendChild(s); return s; };
+  window.GM_setValue = function (k, v) { mem[k] = v; gm('GM_setValue', k + ' = ' + fmt([v])); };
+  window.GM_getValue = function (k, d) { return k in mem ? mem[k] : d; };
+  window.GM_deleteValue = function (k) { delete mem[k]; gm('GM_deleteValue', k); };
+  window.GM_setClipboard = function (t) { gm('GM_setClipboard', fmt([t])); };
+  window.GM_openInTab = function (u) { gm('GM_openInTab', u); };
+  window.GM_notification = function (o) { gm('GM_notification', fmt([((o && o.title) || '') + ' ' + ((o && o.text) || '')])); };
+  window.GM_download = function (o) { gm('GM_download', fmt([(o && (o.name || o.url)) || o])); };
+  window.alert = function (m) { gm('alert', fmt([m])); };
+  window.confirm = function (m) { gm('confirm', fmt([m])); return true; };
+  window.prompt = function (m) { gm('prompt', fmt([m])); return ''; };
+  window.open = function (u) { gm('window.open', u); return null; };
+  window.GM_xmlhttpRequest = function (o) {
+    gm('GM_xmlhttpRequest', (o.method || 'GET') + ' ' + o.url);
+    fetch(o.url, { method: o.method || 'GET', headers: o.headers, body: o.data }).then(function (r) {
+      return r.text().then(function (t) { if (o.onload) o.onload({ status: r.status, statusText: r.statusText, responseText: t, response: t, finalUrl: r.url }); });
+    }).catch(function (e) { if (o.onerror) o.onerror({ error: String(e) }); else post('error', 'GM_xmlhttpRequest: ' + e); });
+  };
+  window.GM_registerMenuCommand = function (name, fn) {
+    if (!bar) { bar = document.createElement('div'); bar.style.cssText = 'position:fixed;right:6px;bottom:6px;z-index:2147483647;display:flex;gap:4px;flex-wrap:wrap;justify-content:flex-end'; (document.body || document.documentElement).appendChild(bar); }
+    var b = document.createElement('button'); b.textContent = '☰ ' + name; b.onclick = function () { gm('GM_registerMenuCommand', name); fn(); };
+    bar.appendChild(b);
+  };
+  post('ready', '');
+})();`;
+
+function openTestDialog() {
+  let ready = false;
+  const ta = h('textarea', { class: 'code', rows: 5, spellcheck: 'false' });
+  ta.value = TEST_PAGE;
+  const frame = h('iframe', { class: 'tframe', sandbox: 'allow-scripts', title: '測試用的網頁' });
+  const log = h('div', { class: 'tlog', role: 'log' });
+  const addLog = (level, text) => {
+    const ln = h('div', { class: 'ln ' + level });
+    ln.textContent = ({ error: '❌ ', warn: '⚠️ ', gm: '🔧 ', sys: '▶ ' }[level] || '・') + text;
+    log.append(ln);
+    while (log.children.length > 200) log.firstChild.remove();
+    log.scrollTop = log.scrollHeight;
+  };
+  const onMsg = (e) => {
+    const d = e.data;
+    if (e.source !== frame.contentWindow || !d || d.tm !== 1) return;
+    if (d.level === 'ready') ready = true; else addLog(d.level, d.text);
+  };
+  const run = () => {
+    log.textContent = ''; ready = false;
+    const res = generateScript({ comments: false, embed: false });
+    res.warns.slice(0, 4).forEach((w) => addLog('warn', w));
+    if (res.stats.hats) addLog('sys', trf('開始執行（{0} 個事件積木）', res.stats.hats));
+    else addLog('warn', tr('還沒有事件積木，所以什麼都不會執行。'));
+    frame.srcdoc = '<!doctype html><html><head><meta charset="utf-8"><style>body{font:14px/1.5 system-ui,sans-serif;margin:12px;color:#222}</style><script>' + TEST_SHIM + '<\/script></head><body>'
+      + ta.value + '<script>' + res.code.replace(/<\/script/gi, '<\\/script') + '<\/script></body></html>';
+    setTimeout(() => { if (!ready && frame.isConnected) addLog('warn', tr('測試視窗沒有回應：這個環境可能不允許內嵌小視窗。請把編輯器存成檔案，用瀏覽器直接開啟再試。')); }, 3000);
+  };
+  const m = openModal({
+    title: '測試腳本', cls: 'wide',
+    body: [
+      h('p', { class: 'muted', text: '在隔離的小視窗裡執行你目前的腳本，不會動到真正的網頁。想測試按鍵或點擊的積木，直接在小視窗裡操作就行。網路、通知、剪貼簿、新分頁這類動作只會記錄在下面。' }),
+      h('div', { class: 'chips', style: { marginBottom: '8px' } }, h('button', { class: 'btn primary sm', text: '▶ 重新執行', onclick: run })),
+      frame,
+      h('div', { class: 'lb', style: { fontWeight: '700', margin: '0 0 6px' }, text: '紀錄' }), log,
+      h('details', { style: { margin: '12px 0 0' } },
+        h('summary', { text: '測試用的網頁（可以修改）', style: { cursor: 'pointer', fontWeight: '700', margin: '0 0 8px' } }), ta),
+    ],
+    footer: [h('button', { class: 'btn', text: '關閉', onclick: () => m.close() })],
+    onClose: () => window.removeEventListener('message', onMsg),
+  });
+  window.addEventListener('message', onMsg);
+  setTimeout(run, 0);
+  return m;
+}
+
+/* =====================================================================
+   積木收藏（存在這個瀏覽器）與工作區搜尋
+   ===================================================================== */
+let favOps = (() => { try { const a = JSON.parse(storeGet('tmblocks.favs') || '[]'); return Array.isArray(a) ? a.filter((x) => typeof x === 'string') : []; } catch (e) { return []; } })();
+const isFav = (op) => favOps.includes(op);
+function setFav(op, on) {
+  favOps = favOps.filter((x) => x !== op);
+  if (on) favOps.push(op);
+  storeSet('tmblocks.favs', JSON.stringify(favOps));
+  notify(on ? '已加入收藏' : '已取消收藏', 1300);
+}
+/** 積木庫裡每個積木右邊的 ☆ */
+function favBtn(op) {
+  const label = () => (isFav(op) ? '取消收藏' : '收藏這個積木');
+  const btn = h('button', { class: 'fav-btn' + (isFav(op) ? ' on' : ''), type: 'button', title: label(), 'aria-label': label(), text: isFav(op) ? '★' : '☆' });
+  btn.onclick = () => {
+    setFav(op, !isFav(op));
+    if (view.cat === 'fav' && !view.search) { renderPalette(); return; }   // 在「收藏」裡取消：整排更新
+    const on = isFav(op);
+    btn.classList.toggle('on', on); btn.textContent = on ? '★' : '☆';
+    btn.title = tr(label()); btn.setAttribute('aria-label', tr(label()));
+  };
+  return btn;
+}
+
+const find = { open: false, q: '', hits: [], cur: -1 };
+/** 一個積木可以被搜尋到的文字：積木上看得到的字、欄位裡填的內容、積木名稱（中英文都找得到） */
+function findHay(b) {
+  const d = DEFS[b.op];
+  if (!d) return '';
+  const vals = Object.values(b.args).filter((v) => typeof v === 'string' || typeof v === 'number').join(' ');
+  return (labelText(b, d) + ' ' + vals + ' ' + labelPlain(d) + ' ' + b.op).toLowerCase();
+}
+function paintFind() {
+  $$('#wsInner .found, #wsInner .found-cur').forEach((e) => e.classList.remove('found', 'found-cur'));
+  find.hits.forEach((id, i) => { const el = findBlockEl(id); if (el) el.classList.add(i === find.cur ? 'found-cur' : 'found'); });
+  $('#findCount').textContent = !find.open || !find.q.trim() ? '' : find.hits.length ? (find.cur + 1) + '/' + find.hits.length : tr('沒有符合');
+}
+function applyFind(keep) {
+  const prev = keep ? find.hits[find.cur] : null;
+  const terms = find.q.toLowerCase().split(/\s+/).filter(Boolean);   // 多個關鍵字要全部符合
+  find.hits = [];
+  if (find.open && terms.length) walkAll((b) => { const hay = findHay(b); if (terms.every((t) => hay.includes(t))) find.hits.push(b.id); });
+  find.cur = find.hits.length ? Math.max(0, find.hits.indexOf(prev)) : -1;
+  paintFind();
+}
+/** dir：1 下一個、-1 上一個、0 留在目前這個；並把它捲到工作區中間 */
+function stepFind(dir) {
+  if (!find.hits.length) return;
+  find.cur = (find.cur + dir + find.hits.length) % find.hits.length;
+  paintFind();
+  const el = findBlockEl(find.hits[find.cur]);
+  if (!el) return;
+  const ws = $('#ws'), r = el.getBoundingClientRect(), w = ws.getBoundingClientRect();
+  ws.scrollTo(ws.scrollLeft + r.left - w.left - Math.max(24, (w.width - r.width) / 2), ws.scrollTop + r.top - w.top - Math.max(64, (w.height - r.height) / 2));
+}
+function openFind() {
+  find.open = true;
+  $('#wsFind').hidden = false;
+  const inp = $('#findInput');
+  inp.focus(); inp.select();
+  applyFind(true); stepFind(0);
+}
+function closeFind() { find.open = false; $('#wsFind').hidden = true; applyFind(false); }
+function bindFind() {
+  const inp = $('#findInput');
+  $('#btnFind').onclick = () => (find.open ? closeFind() : openFind());
+  $('#findClose').onclick = closeFind;
+  $('#findNext').onclick = () => stepFind(1);
+  $('#findPrev').onclick = () => stepFind(-1);
+  inp.addEventListener('input', () => { find.q = inp.value; applyFind(false); stepFind(0); });
+  inp.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' && !e.isComposing) { e.preventDefault(); stepFind(e.shiftKey ? -1 : 1); }
+    else if (e.key === 'Escape') { e.preventDefault(); closeFind(); }
+  });
+  window.addEventListener('keydown', (e) => {
+    if ((e.ctrlKey || e.metaKey) && !e.altKey && !e.shiftKey && e.key.toLowerCase() === 'f' && !_modals.length && !drag.active) { e.preventDefault(); openFind(); }
+  });
+}
+
+/** 手機的上方列放不下太多按鈕：復原／重做移到工作區右下角的控制列 */
+function placeHistoryButtons() {
+  const phone = window.matchMedia('(max-width:759px)').matches;
+  const undo = $('#btnUndo'), redo = $('#btnRedo');
+  if (phone) $('#wsCtl').prepend(undo, redo);
+  else $('.top-actions').prepend(undo, redo);
+}
 function bindUI() {
+  placeHistoryButtons();
+  window.matchMedia('(max-width:759px)').addEventListener('change', placeHistoryButtons);
   $('#btnExport').onclick = () => toggleCodePane(true);
   $('#btnCodeClose').onclick = () => toggleCodePane(false);
   $('#btnCopy').onclick = doCopy;
@@ -4489,7 +6344,11 @@ function bindUI() {
   $('#btnMeta').onclick = openMeta;
   $('#btnExamples').onclick = openExamples;
   $('#btnExt').onclick = () => openExtDialog();
+  $('#btnTest').onclick = openTestDialog;
+  bindFind();
+  $('#btnRunTest').onclick = openTestDialog;
   $('#btnProject').onclick = () => openProjectMenu($('#btnProject'));
+  $('#btnLang').onclick = () => openLangMenu($('#btnLang'));
   $('#optComments').onchange = refreshCode;
   $('#hintStart').onclick = () => addFromPalette('hat_start');
   $('#hintExamples').onclick = openExamples;
@@ -4710,12 +6569,96 @@ const EXAMPLES = [
       };
     },
   },
+  {
+    title: '計數按鈕（建立並調整文字按鈕）',
+    desc: '在畫面右下角建立一個文字按鈕；每按一下就把次數加一並改按鈕的文字，按滿 5 次按鈕會變成紅色、變大。',
+    build() {
+      const vid = newVarId();
+      return {
+        meta: { name: '計數按鈕', description: '建立一個會計數、還會變色的文字按鈕' },
+        variables: [{ id: vid, name: '次數', kind: 'var' }],
+        scripts: [
+          SC(28, 30, B('hat_start'),
+            B('tbtn_create', { NAME: '計數', TEXT: '點擊次數：0', POS: 'br' }),
+            B('tbtn_tip', { NAME: '計數', TEXT: '按一下加一' })),
+          SC(28, 250, B('hat_tbtn', { NAME: '計數' }),
+            B('var_change', { NAME: vid, N: 1 }),
+            B('tbtn_text', { NAME: '計數', TEXT: B('op_join', { A: '點擊次數：', B: B('var_get', { NAME: vid }) }) }),
+            B('ctl_if', { COND: B('op_cmp', { A: B('var_get', { NAME: vid }), OP: '>=', B: 5 }) },
+              [B('tbtn_color', { NAME: '計數', WHICH: 'bg', C: '#e03131' }), B('tbtn_size', { NAME: '計數', SIZE: 'xl' })])),
+        ],
+      };
+    },
+  },
+  {
+    title: '浮動說明視窗（按 Alt+H 開關）',
+    desc: '用「嵌入網頁」放一個可以拖曳、縮小的浮動視窗，內容是自己寫的 HTML；再按一次 Alt+H 就關掉。',
+    build() {
+      const html = '<div style="font:14px system-ui,sans-serif;padding:12px"><b>快速鍵說明</b><ul style="padding-left:18px;margin:8px 0 0"><li>Alt + H：開關這個視窗</li><li>Alt + S：搜尋選取的文字</li></ul></div>';
+      return {
+        meta: { name: '浮動說明視窗', description: '按 Alt+H 開關一個浮動的快速鍵說明視窗' },
+        variables: [],
+        scripts: [
+          SC(28, 30, B('hat_key', { KEY: 'h', MOD: 'alt' }),
+            B('ctl_ifelse', { COND: B('embed_exists', { NAME: '快速鍵說明' }) },
+              [B('embed_show', { ACT: 'remove', NAME: '快速鍵說明' })],
+              [B('embed_float', { POS: 'br', NAME: '快速鍵說明', SRC: html, W: '300px', H: '150px' })])),
+        ],
+      };
+    },
+  },
+  {
+    title: '用彈出視窗看影片（按 Alt+V）',
+    desc: '把 YouTube 的一般連結貼進去就會自動換成可以嵌入的網址；背景變暗，點背景或按 Esc 關閉。',
+    build() {
+      return {
+        meta: { name: '彈出視窗看影片', description: '按 Alt+V，用彈出視窗播放影片' },
+        variables: [],
+        scripts: [
+          SC(28, 30, B('hat_key', { KEY: 'v', MOD: 'alt' }),
+            B('embed_modal', { NAME: '影片', SRC: 'https://www.youtube.com/watch?v=aqz-KE-bpKQ', W: '900px', H: '70vh' })),
+        ],
+      };
+    },
+  },
+  {
+    title: '把廣告換成自己的提示（嵌入 HTML）',
+    desc: '把 .ad 這個區塊換成一個嵌入的小頁面，大小會和原本的廣告一樣。',
+    build() {
+      return {
+        meta: { name: '廣告換成提示', description: '把廣告區塊換成自己寫的提示小頁面' },
+        variables: [],
+        scripts: [
+          SC(28, 30, B('hat_start'),
+            B('embed_replace', { SEL: '.ad', NAME: '廣告提示', SRC: '<div style="font:16px system-ui,sans-serif;display:grid;place-items:center;height:100vh;background:#fff3bf;color:#5f3b00">這裡原本是廣告</div>' })),
+        ],
+      };
+    },
+  },
 ];
+
+/** 載入範例時，把裡面的文字內容（名稱、提示文字…）翻成目前的介面語言 */
+function localizeProject(p) {
+  const L = (v) => (typeof v === 'string' ? tr(v) : v);
+  const walk = (b) => {
+    for (; b; b = b.next) {
+      Object.keys(b.args).forEach((k) => { const v = b.args[k]; if (v && typeof v === 'object') walk(v); else b.args[k] = L(v); });
+      (b.subs || []).forEach(walk);
+    }
+  };
+  p.scripts.forEach((s) => walk(s.stack));
+  if (p.meta) ['name', 'description'].forEach((k) => { if (p.meta[k]) p.meta[k] = tr(p.meta[k]); });
+  (p.variables || []).forEach((v) => { v.name = tr(v.name); });
+  return p;
+}
 
 /* =====================================================================
    初始化
    ===================================================================== */
 function init() {
+  initLang();                            // 先決定語言（英文是內建的，馬上就有）
+  collectStatic();
+  translateStatic();
   applyTheme(storeGet('tmblocks.theme') || 'auto', true);
   const z = parseFloat(storeGet('tmblocks.zoom'));
   if (z) view.zoom = clamp(z, 0.5, 1.6);
@@ -4723,6 +6666,7 @@ function init() {
   let restored = false;
   const saved = storeGet('tmblocks.project.v1');
   if (saved) { try { loadProject(JSON.parse(saved)); restored = true; } catch (e) { restored = false; } }
+  if (!restored) state.meta = defaultMeta();   // 新專案的預設名稱用目前的語言
   renderCats();
   renderPalette();
   renderWorkspace();
@@ -4731,9 +6675,12 @@ function init() {
   resetHistory();
   refreshCode();
   getDownloadsCap();
+  onI18nChange(applyI18n);
   if (!restored && !storeGet('tmblocks.welcomed')) { storeSet('tmblocks.welcomed', '1'); setTimeout(openHelp, 250); }
 }
-init();
+// 被不明網站嵌入時（見檔案開頭的檢查）不要啟動
+if (window.__tmGate) window.__tmGate.then((ok) => { if (ok) init(); });
+else init();
 
 </script>
 </body>

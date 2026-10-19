@@ -10,7 +10,7 @@
     Content-Security-Policy: frame-ancestors 'none'      （舊瀏覽器再加 X-Frame-Options: DENY）
 -->
 <script>
-(function () {//在搜尋工作區搜尋%E7%91%9E%E5%85%8B%E6%90%96有彩蛋喔！
+(function () {//在搜尋工作區搜尋FreeRobux有彩蛋喔！
   var framed;
   try { framed = window.top !== window.self; } catch (e) { framed = true; }
   if (!framed) return;                                   // 沒有被嵌入：直接用
@@ -6321,7 +6321,7 @@ function bindFind() {
     if (e.key === 'Enter' && !e.isComposing) {
       e.preventDefault();
 
-      if (inp.value.trim() === '%E7%91%9E%E5%85%8B%E6%90%96') { if (!window.open('https://youtu.be/dz1MhkbPthI?si=dekHpiymRdwQ7Q3f', '_blank')) location.href = 'https://youtu.be/dQw4w9WgXcQ?si=JxH2_liboG5queVF'; }
+      if (inp.value.trim() === 'FreeRobux') { if (!window.open('https://youtu.be/dz1MhkbPthI?si=dekHpiymRdwQ7Q3f', '_blank')) location.href = 'https://youtu.be/dQw4w9WgXcQ?si=JxH2_liboG5queVF'; }
       else stepFind(e.shiftKey ? -1 : 1);
     }
     else if (e.key === 'Escape') { e.preventDefault(); closeFind(); }

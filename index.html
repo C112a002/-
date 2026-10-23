@@ -862,7 +862,7 @@ I18N.bundled.en = Object.assign(Object.create(null), {
 "匯出。": "Export.",
 "按「匯出」複製或下載程式碼，貼到竄改猴就完成了。": "Tap \"Export\" to copy or download the code, then paste it into Tampermonkey. Done!",
 "想做全自動的腳本？": "Want a fully automatic script?",
-"看「事件」的定時與監控、「控制」的等待與出錯處理、「鍵盤滑鼠」的模擬按鍵，以及「圖片按鈕」的文字找按鈕、圖片按鈕。「範例」裡有現成的組合可以參考。": "Look at the timers and monitors in \"Events\", the waiting and error handling in \"Control\", the simulated keys in \"Keyboard & mouse\", and the text-based button finding and image buttons in \"Image buttons\". The \"Examples\" have ready-made combinations to learn from.",
+"看「事件」的定時與監控、「控制」的等待與出錯處理、「鍵盤滑鼠」的模擬按鍵，以及「按鈕」的文字找按鈕、圖片按鈕。「範例」裡有現成的組合可以參考。": "Look at the timers and monitors in \"Events\", the waiting and error handling in \"Control\", the simulated keys in \"Keyboard & mouse\", and the text-based button finding and image buttons in \"Buttons\". The \"Examples\" have ready-made combinations to learn from.",
 "想要自己做積木？": "Want to make your own blocks?",
 "按上方「自訂積木」，可以匯入 TurboWarp 風格的 JavaScript 檔，檔案裡描述的積木會直接出現在積木庫裡。編輯器只會讀取積木的描述，不會執行你匯入的程式碼。": "Tap \"Custom blocks\" at the top to import a TurboWarp-style JavaScript file. The blocks described in the file appear right in the palette. The editor only reads the block descriptions; it never runs the code you import.",
 "小技巧：點選積木會出現下方工具列（複製／刪除）。把積木拖回積木庫就是刪除。電腦可用 Ctrl+Z 復原、Delete 刪除，在積木上按右鍵有更多選項。你的作品會自動存在這個瀏覽器裡。": "Tips: tapping a block shows a toolbar at the bottom (copy / delete). Dragging a block back to the palette deletes it. On a computer use Ctrl+Z to undo, Delete to delete, and right-click a block for more options. Your work is saved automatically in this browser.",
@@ -976,8 +976,7 @@ I18N.bundled.en = Object.assign(Object.create(null), {
 "等待、重複、判斷。像是「如果…那麼…」或「重複 10 次」。全自動腳本常用：等元素或文字出現、隨機等待（像真人一樣）、出錯時換個做法。": "Waiting, repeating and deciding, like \"if … then …\" or \"repeat 10 times\". Handy for fully automatic scripts: wait for an element or text, wait a random time (like a real person), and do something else when an error happens.",
 "替你操作網頁：點擊按鈕、輸入文字、捲動、換頁。「元素選擇器」就是告訴積木要操作哪個東西，例如 #id、.class。不知道怎麼寫？到「進階」拿「元素選擇器工具」，點一下網頁上的元素就能複製。": "Operate the page for you: click buttons, type text, scroll, change pages. An \"element selector\" tells a block which thing to operate, such as #id or .class. Don't know how to write one? Get the \"Element picker tool\" from \"Advanced\" and click an element on the page to copy it.",
 "模擬按鍵、輸入文字、滑鼠移動與點擊。注意：模擬出來的事件只有「網頁自己有在聽」的功能才會反應（例如快速鍵、選單、遊戲按鍵）；單純要把文字填進輸入框，用「動作 → 輸入文字」最穩。": "Simulate keys, typing, and mouse movement and clicks. Note: simulated events only affect features that the page itself is listening for (such as shortcuts, menus and game keys). To simply fill text into an input, \"Actions → Type text\" is the most reliable.",
-"在畫面上放文字按鈕，按下去就執行積木；也能隨時改它的文字、顏色、大小、形狀和位置，或把它放進網頁的某個地方。每個按鈕有一個「名稱」，用名稱找到要調整的按鈕（用「放一個文字按鈕」做出來的按鈕，名稱就是它一開始的文字）。": "Put text buttons on the screen; pressing one runs your blocks. You can change a button's text, color, size, shape and position at any time, or place it somewhere inside the page. Every button has a \"name\", and you use the name to pick the button to adjust (for a button made with \"Put a text button\", the name is its original text).",
-"在畫面上放一個圖片按鈕（可以用你自己的圖片）；也能用「文字」或「圖片」找到網頁上的按鈕再點下去，或替換、插入圖片。": "Put an image button on the screen (you can use your own picture). You can also find buttons on the page by their text or image and click them, or replace and insert images.",
+"在畫面上放按鈕，按下去就執行積木。文字按鈕可以隨時改它的文字、顏色、大小、形狀和位置，或把它放進網頁的某個地方；圖片按鈕可以用你自己的圖片。每個文字按鈕有一個「名稱」，用名稱找到要調整的按鈕（用「放一個文字按鈕」做出來的按鈕，名稱就是它一開始的文字）。也能用「文字」或「圖片」找到網頁上的按鈕再點下去，或替換、插入圖片。": "Put buttons on the screen; pressing one runs your blocks. A text button's text, color, size, shape and position can be changed at any time, or you can place it somewhere inside the page; an image button can use your own picture. Every text button has a \"name\", and you use the name to pick the button to adjust (for a button made with \"Put a text button\", the name is its original text). You can also find buttons on the page by their text or image and click them, or replace and insert images.",
 "改變網頁的樣子：隱藏廣告、換顏色、改文字、加入新內容。「嵌入網頁」可以把另一個網頁（或你自己寫的 HTML）放進目前的網頁，或做成浮動視窗、彈出視窗。有些網站禁止被嵌入，會顯示空白，這是對方網站的限制。": "Change how the page looks: hide ads, change colors, edit text, add new content. \"Embed web page\" puts another web page (or HTML you write yourself) into the current page, or shows it as a floating window or popup. Some sites forbid being embedded and show up blank; that's a restriction of that site.",
 "跟使用者說話：彈出視窗、浮動提示、桌面通知。": "Talk to the user: popup windows, floating notices, desktop notifications.",
 "讀取網頁資訊：目前網址、元素的文字、頁面上有沒有某個東西。這些圓形積木可以放進其他積木的空格。": "Read information from the page: the current URL, the text of an element, whether something is on the page. These round blocks can be dropped into the slots of other blocks.",
@@ -1861,6 +1860,71 @@ Object.assign(I18N.bundled.en, {
 "關閉 (Esc)": "Close (Esc)",
 "沒有符合": "No match"
 });
+Object.assign(I18N.bundled.en, {
+  "在畫面上新增文字或圖片。每一個都有一個「名稱」，之後用名稱就能移動、旋轉、顯示、隱藏它。座標以瀏覽器視窗左上角為 (0, 0)，指的是項目的中心點。": "Add text or images to the screen. Each one has a \"name\", and you use the name later to move, rotate, show or hide it. Coordinates start at the top-left of the browser window (0, 0) and refer to the item's center point.",
+  "新增文字或圖片": "Add text or images",
+  "移動": "Move",
+  "旋轉": "Rotate",
+  "顯示與隱藏": "Show and hide",
+  "被點擊與偵測": "Clicks and sensing",
+  "新增畫面文字 {NAME}，內容 {TEXT}，放在{POS}": "Add on-screen text {NAME} with the content {TEXT} at the {POS}",
+  "新增畫面圖片 {NAME}，圖片 {IMG}，寬度 {W}，放在{POS}": "Add on-screen image {NAME}: {IMG}, width {W}, at the {POS}",
+  "把 {NAME} 的內容改成 {TEXT}": "Change the content of {NAME} to {TEXT}",
+  "把 {NAME} 移到{POS}": "Move {NAME} to the {POS}",
+  "把 {NAME} 放在畫面 X {X} Y {Y}": "Put {NAME} on the screen at X {X} Y {Y}",
+  "把 {NAME} 往{DIR}移動 {N} 像素": "Move {NAME} {DIR} by {N} pixels",
+  "讓 {NAME} 用 {S} 秒滑到 X {X} Y {Y}": "Glide {NAME} to X {X} Y {Y} in {S} sec",
+  "把 {NAME} {HOW} {DEG} 度": "Rotate {NAME}: {HOW} {DEG} degrees",
+  "{ACT} {NAME}，每 {S} 秒轉一圈": "{ACT} {NAME}, one turn every {S} sec",
+  "{ACT} {NAME}": "{ACT} {NAME}",
+  "把 {NAME} 的透明度設為 {PCT} %": "Set the opacity of {NAME} to {PCT} %",
+  "把 {NAME} 的大小設為 {PCT} %": "Set the size of {NAME} to {PCT} %",
+  "把 {NAME} 的{WHICH}設為 {C}": "Set the {WHICH} of {NAME} to {C}",
+  "移除所有畫面文字和圖片": "Remove all on-screen text and images",
+  "當 {NAME} 被點擊時": "When {NAME} is clicked",
+  "畫面上有 {NAME}": "There is {NAME} on the screen",
+  "{NAME} 的{PROP}": "The {PROP} of {NAME}",
+  "畫面項目 {NAME}（元素）": "On-screen item {NAME} (element)",
+  "畫面中間": "center of the screen",
+  "上方中間": "top center",
+  "下方中間": "bottom center",
+  "轉到": "set to",
+  "順時針轉": "clockwise by",
+  "逆時針轉": "counterclockwise by",
+  "順時針旋轉": "Spin clockwise",
+  "逆時針旋轉": "Spin counterclockwise",
+  "停止旋轉": "Stop spinning",
+  "切換顯示": "Toggle visibility",
+  "X 座標": "X position",
+  "Y 座標": "Y position",
+  "旋轉角度": "rotation angle",
+  "大小（%）": "size (%)",
+  "標籤1": "Label 1",
+  "圖片1": "Image 1",
+  "新內容": "New content",
+  "顯示：會轉的星星和標題": "Display: a spinning star and a title",
+  "在畫面上新增一段標題文字和一顆會不停旋轉的星星；點星星就會彈出提示，並讓標題換字。": "Adds a title and a star that spins nonstop; clicking the star changes the title and sends the star gliding away.",
+  "畫面上的標題與星星": "Title and star on the screen",
+  "在畫面上新增標題文字和旋轉的星星，點星星會換標題": "Adds a title and a spinning star to the screen; clicking the star changes the title",
+  "標題": "Title",
+  "星星": "Star",
+  "歡迎回來！": "Welcome back!",
+  "你點到星星了！": "You clicked the star!",
+  "畫面上的文字與圖片：每個都有名稱，之後可以用名稱移動、旋轉、顯示、隱藏…": "On-screen text and images: each has a name, so you can move, rotate, show or hide it by that name later…",
+  "找不到畫面上的文字或圖片：": "Couldn't find the on-screen text or image:",
+  "依目前的位置、旋轉、大小更新畫面": "Update the screen from the current position, rotation and size",
+  "新增文字（同名的會被換掉）。pos：c 中間 / tc 上中 / bc 下中 / tl tr bl br 四個角落": "Add text (one with the same name is replaced). pos: c center / tc top-center / bc bottom-center / tl tr bl br corners",
+  "新增圖片。src 可以是圖片網址、data: 圖片，或 Emoji / 文字": "Add an image. src can be an image URL, a data: image, or an emoji / text",
+  "目前的中心點（以視窗左上角為 0,0）": "Current center point (0,0 is the top-left of the window)",
+  "用 sec 秒慢慢滑到指定的位置（會等滑完才做下一個積木）": "Glide to the given position over sec seconds (the next block waits until it finishes)",
+  "停止不停旋轉，並記住目前的角度": "Stop the endless spin and remember the current angle",
+  "how：to 轉到 / cw 順時針轉 / ccw 逆時針轉": "how: to set to / cw clockwise / ccw counterclockwise",
+  "不停旋轉：act 是 cw / ccw / stop，sec 是轉一圈要幾秒": "Endless spin: act is cw / ccw / stop, sec is seconds per turn",
+  "act：show 顯示 / hide 隱藏 / toggle 切換 / remove 移除": "act: show / hide / toggle / remove",
+  "which：fg 文字顏色 / bg 背景色 / border 邊框顏色": "which: fg text color / bg background color / border border color",
+  "被點擊時執行（項目可以之後才新增）": "Runs when clicked (the item can be added later)",
+  "prop：x / y / rot / opacity / scale": "prop: x / y / rot / opacity / scale"
+});
 
 /* =====================================================================
    積木分類、參數型別與所有內建積木
@@ -1871,8 +1935,8 @@ const CATS = [
   { id: 'ctl', name: '控制', color: '#d9731a', tip: '等待、重複、判斷。像是「如果…那麼…」或「重複 10 次」。全自動腳本常用：等元素或文字出現、隨機等待（像真人一樣）、出錯時換個做法。' },
   { id: 'act', name: '動作', color: '#2f6fdb', tip: '替你操作網頁：點擊按鈕、輸入文字、捲動、換頁。「元素選擇器」就是告訴積木要操作哪個東西，例如 #id、.class。不知道怎麼寫？到「進階」拿「元素選擇器工具」，點一下網頁上的元素就能複製。' },
   { id: 'key', name: '鍵盤滑鼠', color: '#4c5fd5', tip: '模擬按鍵、輸入文字、滑鼠移動與點擊。注意：模擬出來的事件只有「網頁自己有在聽」的功能才會反應（例如快速鍵、選單、遊戲按鍵）；單純要把文字填進輸入框，用「動作 → 輸入文字」最穩。' },
-  { id: 'tbtn', name: '文字按鈕', color: '#c2255c', tip: '在畫面上放文字按鈕，按下去就執行積木；也能隨時改它的文字、顏色、大小、形狀和位置，或把它放進網頁的某個地方。每個按鈕有一個「名稱」，用名稱找到要調整的按鈕（用「放一個文字按鈕」做出來的按鈕，名稱就是它一開始的文字）。' },
-  { id: 'btn', name: '圖片按鈕', color: '#6f8d12', tip: '在畫面上放一個圖片按鈕（可以用你自己的圖片）；也能用「文字」或「圖片」找到網頁上的按鈕再點下去，或替換、插入圖片。' },
+  { id: 'btn', name: '按鈕', en: 'Buttons', color: '#6f8d12', tip: '在畫面上放按鈕，按下去就執行積木。文字按鈕可以隨時改它的文字、顏色、大小、形狀和位置，或把它放進網頁的某個地方；圖片按鈕可以用你自己的圖片。每個文字按鈕有一個「名稱」，用名稱找到要調整的按鈕（用「放一個文字按鈕」做出來的按鈕，名稱就是它一開始的文字）。也能用「文字」或「圖片」找到網頁上的按鈕再點下去，或替換、插入圖片。' },
+  { id: 'disp', name: '顯示', en: 'Display', color: '#8f5e3b', tip: '在畫面上新增文字或圖片。每一個都有一個「名稱」，之後用名稱就能移動、旋轉、顯示、隱藏它。座標以瀏覽器視窗左上角為 (0, 0)，指的是項目的中心點。' },
   { id: 'dom', name: '網頁外觀', color: '#7c4dde', tip: '改變網頁的樣子：隱藏廣告、換顏色、改文字、加入新內容。「嵌入網頁」可以把另一個網頁（或你自己寫的 HTML）放進目前的網頁，或做成浮動視窗、彈出視窗。有些網站禁止被嵌入，會顯示空白，這是對方網站的限制。' },
   { id: 'ui', name: '訊息', color: '#c040b0', tip: '跟使用者說話：彈出視窗、浮動提示、桌面通知。' },
   { id: 'sense', name: '偵測', color: '#1790bd', tip: '讀取網頁資訊：目前網址、元素的文字、頁面上有沒有某個東西。這些圓形積木可以放進其他積木的空格。' },
@@ -1884,6 +1948,7 @@ const CATS = [
 ];
 const extCats = [];
 const allCats = () => CATS.concat(extCats);
+const catLabel = (c) => (c.en && String(I18N.lang).startsWith('en')) ? c.en : c.name;
 const catById = (id) => allCats().find((c) => c.id === id) || CATS[CATS.length - 1];
 
 /* ---------- 參數型別 ----------
@@ -1993,7 +2058,7 @@ def('hat_interval', 'event', 'hat', '每隔 {N} 秒重複執行', { N: PN(5) }, 
   fnb('setInterval(async () => {', c.body(), '}, ' + Math.max(10, Math.round((Number(r.N) || 1) * 1000)) + ');'));
 def('hat_url', 'event', 'hat', '當網址改變時', {}, (a, c) => fnb('onUrlChange(async (url) => {', c.body(), '});'), { helpers: ['onUrlChange'] });
 def('hat_select', 'event', 'hat', '當選取文字時', {}, (a, c) => fnb('onSelect(async (text) => {', c.body(), '});'), { helpers: ['onSelect'] });
-def('hat_fab', 'tbtn', 'hat', '在畫面{POS}放一個文字按鈕 {TEXT}，按下時', { POS: DD([['右下角', 'br'], ['左下角', 'bl'], ['右上角', 'tr'], ['左上角', 'tl']], 'br'), TEXT: P('執行') }, (a, c) =>
+def('hat_fab', 'btn', 'hat', '在畫面{POS}放一個文字按鈕 {TEXT}，按下時', { POS: DD([['右下角', 'br'], ['左下角', 'bl'], ['右上角', 'tr'], ['左上角', 'tl']], 'br'), TEXT: P('執行') }, (a, c) =>
   fnb('addFab(' + a.TEXT + ', async () => {', c.body(), '}, ' + a.POS + ');'), { helpers: ['addFab'], group: '快速做一個按鈕' });
 def('hat_menu', 'event', 'hat', '當點選猴子選單 {NAME} 時', { NAME: P('我的功能') }, (a, c) =>
   fnb('GM_registerMenuCommand(' + a.NAME + ', async () => {', c.body(), '});'), { grants: ['GM_registerMenuCommand'] });
@@ -2321,32 +2386,32 @@ def('mouse_right', 'key', 'stack', '對 {SEL} 按滑鼠右鍵', { SEL: SEL('#ite
 /* =====================  文字按鈕  ===================== */
 const TBTN_POS = [['右下角', 'br'], ['左下角', 'bl'], ['右上角', 'tr'], ['左上角', 'tl']];
 const tbtnSet = (a, prop, value) => 'tbtnSet(' + a.NAME + ', ' + q(prop) + ', ' + value + ');';
-def('tbtn_create', 'tbtn', 'stack', '建立文字按鈕 {NAME}，文字 {TEXT}，放在{POS}', { NAME: T('按鈕1'), TEXT: T('按我'), POS: DD(TBTN_POS, 'br') }, (a) =>
+def('tbtn_create', 'btn', 'stack', '建立文字按鈕 {NAME}，文字 {TEXT}，放在{POS}', { NAME: T('按鈕1'), TEXT: T('按我'), POS: DD(TBTN_POS, 'br') }, (a) =>
   'tbtnCreate(' + a.NAME + ', ' + a.TEXT + ', ' + a.POS + ');', { helpers: ['tbtnCore'], group: '建立按鈕與按下時' });
-def('hat_tbtn', 'tbtn', 'hat', '當文字按鈕 {NAME} 被按下時', { NAME: P('按鈕1') }, (a, c) =>
+def('hat_tbtn', 'btn', 'hat', '當文字按鈕 {NAME} 被按下時', { NAME: P('按鈕1') }, (a, c) =>
   fnb('onTextButton(' + a.NAME + ', async (el) => {', c.body({ kind: 'el', name: 'el' }), '});'), { helpers: ['onTextButton'] });
-def('tbtn_click', 'tbtn', 'stack', '按下文字按鈕 {NAME}', { NAME: T('按鈕1') }, (a) => 'tbtnClick(' + a.NAME + ');', { helpers: ['tbtnCore'] });
-def('tbtn_text', 'tbtn', 'stack', '把文字按鈕 {NAME} 的文字改成 {TEXT}', { NAME: T('按鈕1'), TEXT: T('新文字') }, (a) => tbtnSet(a, 'text', a.TEXT), { helpers: ['tbtnCore'], group: '調整按鈕' });
-def('tbtn_color', 'tbtn', 'stack', '把文字按鈕 {NAME} 的{WHICH}設為 {C}', { NAME: T('按鈕1'), WHICH: DD([['背景色', 'bg'], ['文字顏色', 'fg'], ['邊框顏色', 'border']], 'bg'), C: COL('#e8590c') }, (a, c, r) =>
+def('tbtn_click', 'btn', 'stack', '按下文字按鈕 {NAME}', { NAME: T('按鈕1') }, (a) => 'tbtnClick(' + a.NAME + ');', { helpers: ['tbtnCore'] });
+def('tbtn_text', 'btn', 'stack', '把文字按鈕 {NAME} 的文字改成 {TEXT}', { NAME: T('按鈕1'), TEXT: T('新文字') }, (a) => tbtnSet(a, 'text', a.TEXT), { helpers: ['tbtnCore'], group: '調整按鈕' });
+def('tbtn_color', 'btn', 'stack', '把文字按鈕 {NAME} 的{WHICH}設為 {C}', { NAME: T('按鈕1'), WHICH: DD([['背景色', 'bg'], ['文字顏色', 'fg'], ['邊框顏色', 'border']], 'bg'), C: COL('#e8590c') }, (a, c, r) =>
   tbtnSet(a, ['bg', 'fg', 'border'].includes(r.WHICH) ? r.WHICH : 'bg', a.C), { helpers: ['tbtnCore'] });
-def('tbtn_size', 'tbtn', 'stack', '把文字按鈕 {NAME} 的大小設為{SIZE}', { NAME: T('按鈕1'), SIZE: DD([['小', 's'], ['中', 'm'], ['大', 'l'], ['特大', 'xl']], 'l') }, (a, c, r) =>
+def('tbtn_size', 'btn', 'stack', '把文字按鈕 {NAME} 的大小設為{SIZE}', { NAME: T('按鈕1'), SIZE: DD([['小', 's'], ['中', 'm'], ['大', 'l'], ['特大', 'xl']], 'l') }, (a, c, r) =>
   tbtnSet(a, 'size', q(['s', 'm', 'l', 'xl'].includes(r.SIZE) ? r.SIZE : 'm')), { helpers: ['tbtnCore'] });
-def('tbtn_shape', 'tbtn', 'stack', '把文字按鈕 {NAME} 的形狀設為{SHAPE}', { NAME: T('按鈕1'), SHAPE: DD([['圓形膠囊', 'pill'], ['圓角方形', 'round'], ['方形', 'square']], 'round') }, (a, c, r) =>
+def('tbtn_shape', 'btn', 'stack', '把文字按鈕 {NAME} 的形狀設為{SHAPE}', { NAME: T('按鈕1'), SHAPE: DD([['圓形膠囊', 'pill'], ['圓角方形', 'round'], ['方形', 'square']], 'round') }, (a, c, r) =>
   tbtnSet(a, 'shape', q(['pill', 'round', 'square'].includes(r.SHAPE) ? r.SHAPE : 'pill')), { helpers: ['tbtnCore'] });
-def('tbtn_move', 'tbtn', 'stack', '把文字按鈕 {NAME} 移到{POS}', { NAME: T('按鈕1'), POS: DD(TBTN_POS, 'tl') }, (a) => 'tbtnMove(' + a.NAME + ', ' + a.POS + ');', { helpers: ['tbtnCore'] });
-def('tbtn_place', 'tbtn', 'stack', '把文字按鈕 {NAME} 放在畫面 X {X} Y {Y}', { NAME: T('按鈕1'), X: N(100), Y: N(100) }, (a) => 'tbtnPlace(' + a.NAME + ', ' + a.X + ', ' + a.Y + ');', { helpers: ['tbtnCore'] });
-def('tbtn_attach', 'tbtn', 'stack', '把文字按鈕 {NAME} 放到 {SEL} 的{POS}', { NAME: T('按鈕1'), SEL: SEL('h1'), POS: DD(POS_INSERT, 'afterend') }, (a) =>
+def('tbtn_move', 'btn', 'stack', '把文字按鈕 {NAME} 移到{POS}', { NAME: T('按鈕1'), POS: DD(TBTN_POS, 'tl') }, (a) => 'tbtnMove(' + a.NAME + ', ' + a.POS + ');', { helpers: ['tbtnCore'] });
+def('tbtn_place', 'btn', 'stack', '把文字按鈕 {NAME} 放在畫面 X {X} Y {Y}', { NAME: T('按鈕1'), X: N(100), Y: N(100) }, (a) => 'tbtnPlace(' + a.NAME + ', ' + a.X + ', ' + a.Y + ');', { helpers: ['tbtnCore'] });
+def('tbtn_attach', 'btn', 'stack', '把文字按鈕 {NAME} 放到 {SEL} 的{POS}', { NAME: T('按鈕1'), SEL: SEL('h1'), POS: DD(POS_INSERT, 'afterend') }, (a) =>
   'tbtnAttach(' + a.NAME + ', ' + a.SEL + ', ' + a.POS + ');', { helpers: ['tbtnCore'] });
-def('tbtn_show', 'tbtn', 'stack', '{ACT}文字按鈕 {NAME}', { ACT: DD([['顯示', 'show'], ['隱藏', 'hide'], ['移除', 'remove']], 'hide'), NAME: T('按鈕1') }, (a, c, r) =>
+def('tbtn_show', 'btn', 'stack', '{ACT}文字按鈕 {NAME}', { ACT: DD([['顯示', 'show'], ['隱藏', 'hide'], ['移除', 'remove']], 'hide'), NAME: T('按鈕1') }, (a, c, r) =>
   (r.ACT === 'remove' ? 'tbtnRemove(' + a.NAME + ');' : tbtnSet(a, 'visible', r.ACT === 'show' ? 'true' : 'false')), { helpers: ['tbtnCore'] });
-def('tbtn_enable', 'tbtn', 'stack', '{ACT}文字按鈕 {NAME}', { ACT: DD([['啟用', 'on'], ['停用', 'off']], 'off'), NAME: T('按鈕1') }, (a, c, r) =>
+def('tbtn_enable', 'btn', 'stack', '{ACT}文字按鈕 {NAME}', { ACT: DD([['啟用', 'on'], ['停用', 'off']], 'off'), NAME: T('按鈕1') }, (a, c, r) =>
   tbtnSet(a, 'enabled', r.ACT === 'on' ? 'true' : 'false'), { helpers: ['tbtnCore'] });
-def('tbtn_tip', 'tbtn', 'stack', '設定文字按鈕 {NAME} 的提示文字為 {TEXT}', { NAME: T('按鈕1'), TEXT: T('按一下會執行') }, (a) => tbtnSet(a, 'tip', a.TEXT), { helpers: ['tbtnCore'] });
-def('tbtn_style', 'tbtn', 'stack', '對文字按鈕 {NAME} 套用樣式 {CSS}', { NAME: T('按鈕1'), CSS: AR('font-size: 20px; letter-spacing: 2px;') }, (a) => tbtnSet(a, 'css', a.CSS), { helpers: ['tbtnCore'] });
-def('tbtn_clear', 'tbtn', 'stack', '移除所有文字按鈕', {}, () => 'tbtnClear();', { helpers: ['tbtnCore'] });
-def('tbtn_exists', 'tbtn', 'boolean', '有文字按鈕 {NAME}', { NAME: T('按鈕1') }, (a) => '!!tbtnGet(' + a.NAME + ')', { helpers: ['tbtnCore'], group: '偵測文字按鈕' });
-def('tbtn_gettext', 'tbtn', 'reporter', '文字按鈕 {NAME} 的文字', { NAME: T('按鈕1') }, (a) => '(tbtnGet(' + a.NAME + ')?.textContent ?? "")', { rt: 'str', helpers: ['tbtnCore'] });
-def('tbtn_el', 'tbtn', 'reporter', '文字按鈕 {NAME}（元素）', { NAME: T('按鈕1') }, (a) => 'tbtnGet(' + a.NAME + ')', { rt: 'el', helpers: ['tbtnCore'] });
+def('tbtn_tip', 'btn', 'stack', '設定文字按鈕 {NAME} 的提示文字為 {TEXT}', { NAME: T('按鈕1'), TEXT: T('按一下會執行') }, (a) => tbtnSet(a, 'tip', a.TEXT), { helpers: ['tbtnCore'] });
+def('tbtn_style', 'btn', 'stack', '對文字按鈕 {NAME} 套用樣式 {CSS}', { NAME: T('按鈕1'), CSS: AR('font-size: 20px; letter-spacing: 2px;') }, (a) => tbtnSet(a, 'css', a.CSS), { helpers: ['tbtnCore'] });
+def('tbtn_clear', 'btn', 'stack', '移除所有文字按鈕', {}, () => 'tbtnClear();', { helpers: ['tbtnCore'] });
+def('tbtn_exists', 'btn', 'boolean', '有文字按鈕 {NAME}', { NAME: T('按鈕1') }, (a) => '!!tbtnGet(' + a.NAME + ')', { helpers: ['tbtnCore'], group: '偵測文字按鈕' });
+def('tbtn_gettext', 'btn', 'reporter', '文字按鈕 {NAME} 的文字', { NAME: T('按鈕1') }, (a) => '(tbtnGet(' + a.NAME + ')?.textContent ?? "")', { rt: 'str', helpers: ['tbtnCore'] });
+def('tbtn_el', 'btn', 'reporter', '文字按鈕 {NAME}（元素）', { NAME: T('按鈕1') }, (a) => 'tbtnGet(' + a.NAME + ')', { rt: 'el', helpers: ['tbtnCore'] });
 
 /* =====================  按鈕與圖片  ===================== */
 def('hat_fab_img', 'btn', 'hat', '在畫面{POS}放一個圖片按鈕 {IMG}，大小 {SIZE}，按下時', {
@@ -2373,6 +2438,43 @@ def('img_insert', 'btn', 'stack', '在 {SEL} 的{POS}插入圖片 {URL}（寬度
 def('img_unlazy', 'btn', 'stack', '立刻載入所有「滑到才載入」的圖片', {}, () => 'unlazyImages();', { helpers: ['unlazyImages'] });
 def('img_filter', 'btn', 'stack', '讓 {SEL} {EFFECT}', { SEL: SEL('img'), EFFECT: DD([['變黑白', 'grayscale(1)'], ['變模糊', 'blur(6px)'], ['顏色反相', 'invert(1)'], ['提高對比', 'contrast(1.4)'], ['變亮', 'brightness(1.25)'], ['恢復原樣', '']], 'grayscale(1)') }, (a, c, r) =>
   (r.EFFECT === '' ? each(a.SEL, [], "el.style.removeProperty('filter')") : each(a.SEL, [], "el.style.setProperty('filter', " + q(String(r.EFFECT)) + ", 'important')")), { helpers: ['els'] });
+
+/* =====================  顯示（畫面上的文字與圖片）  ===================== */
+const DISP_POS = [['畫面中間', 'c'], ['上方中間', 'tc'], ['下方中間', 'bc'], ['左上角', 'tl'], ['右上角', 'tr'], ['左下角', 'bl'], ['右下角', 'br']];
+const DP = { helpers: ['dispCore'] };
+def('disp_text', 'disp', 'stack', '新增畫面文字 {NAME}，內容 {TEXT}，放在{POS}', { NAME: T('標籤1'), TEXT: T('你好！'), POS: DD(DISP_POS, 'c') }, (a) =>
+  'dispText(' + a.NAME + ', ' + a.TEXT + ', ' + a.POS + ');', Object.assign({ group: '新增文字或圖片' }, DP));
+def('disp_image', 'disp', 'stack', '新增畫面圖片 {NAME}，圖片 {IMG}，寬度 {W}，放在{POS}', { NAME: T('圖片1'), IMG: IMGF('⭐'), W: N(120), POS: DD(DISP_POS, 'c') }, (a) =>
+  'dispImage(' + a.NAME + ', ' + a.IMG + ', ' + a.W + ', ' + a.POS + ');', DP);
+def('disp_content', 'disp', 'stack', '把 {NAME} 的內容改成 {TEXT}', { NAME: T('標籤1'), TEXT: T('新內容') }, (a) =>
+  'dispContent(' + a.NAME + ', ' + a.TEXT + ');', DP);
+def('disp_goto', 'disp', 'stack', '把 {NAME} 移到{POS}', { NAME: T('標籤1'), POS: DD(DISP_POS, 'tl') }, (a) =>
+  'dispGoto(' + a.NAME + ', ' + a.POS + ');', Object.assign({ group: '移動' }, DP));
+def('disp_xy', 'disp', 'stack', '把 {NAME} 放在畫面 X {X} Y {Y}', { NAME: T('標籤1'), X: N(200), Y: N(200) }, (a) =>
+  'dispXY(' + a.NAME + ', ' + a.X + ', ' + a.Y + ');', DP);
+def('disp_move', 'disp', 'stack', '把 {NAME} 往{DIR}移動 {N} 像素', { NAME: T('標籤1'), DIR: DD([['右', 'r'], ['左', 'l'], ['下', 'd'], ['上', 'u']], 'r'), N: N(50) }, (a) =>
+  'dispMove(' + a.NAME + ', ' + a.DIR + ', ' + a.N + ');', DP);
+def('disp_glide', 'disp', 'stack', '讓 {NAME} 用 {S} 秒滑到 X {X} Y {Y}', { NAME: T('標籤1'), S: N(1), X: N(400), Y: N(300) }, (a) =>
+  'await dispGlide(' + a.NAME + ', ' + a.X + ', ' + a.Y + ', ' + a.S + ');', DP);
+def('disp_rotate', 'disp', 'stack', '把 {NAME} {HOW} {DEG} 度', { NAME: T('標籤1'), HOW: DD([['轉到', 'to'], ['順時針轉', 'cw'], ['逆時針轉', 'ccw']], 'cw'), DEG: N(45) }, (a) =>
+  'dispRotate(' + a.NAME + ', ' + a.HOW + ', ' + a.DEG + ');', Object.assign({ group: '旋轉' }, DP));
+def('disp_spin', 'disp', 'stack', '{ACT} {NAME}，每 {S} 秒轉一圈', { ACT: DD([['順時針旋轉', 'cw'], ['逆時針旋轉', 'ccw'], ['停止旋轉', 'stop']], 'cw'), NAME: T('標籤1'), S: N(3) }, (a) =>
+  'dispSpin(' + a.NAME + ', ' + a.ACT + ', ' + a.S + ');', DP);
+def('disp_show', 'disp', 'stack', '{ACT} {NAME}', { ACT: DD([['顯示', 'show'], ['隱藏', 'hide'], ['切換顯示', 'toggle'], ['移除', 'remove']], 'hide'), NAME: T('標籤1') }, (a) =>
+  'dispShow(' + a.NAME + ', ' + a.ACT + ');', Object.assign({ group: '顯示與隱藏' }, DP));
+def('disp_opacity', 'disp', 'stack', '把 {NAME} 的透明度設為 {PCT} %', { NAME: T('標籤1'), PCT: N(50) }, (a) =>
+  'dispOpacity(' + a.NAME + ', ' + a.PCT + ');', DP);
+def('disp_size', 'disp', 'stack', '把 {NAME} 的大小設為 {PCT} %', { NAME: T('標籤1'), PCT: N(150) }, (a) =>
+  'dispSize(' + a.NAME + ', ' + a.PCT + ');', DP);
+def('disp_color', 'disp', 'stack', '把 {NAME} 的{WHICH}設為 {C}', { NAME: T('標籤1'), WHICH: DD([['文字顏色', 'fg'], ['背景色', 'bg'], ['邊框顏色', 'border']], 'bg'), C: COL('#e8590c') }, (a) =>
+  'dispStyle(' + a.NAME + ', ' + a.WHICH + ', ' + a.C + ');', DP);
+def('disp_clear', 'disp', 'stack', '移除所有畫面文字和圖片', {}, () => 'dispClear();', DP);
+def('hat_disp', 'disp', 'hat', '當 {NAME} 被點擊時', { NAME: P('標籤1') }, (a, c) =>
+  fnb('dispOnClick(' + a.NAME + ', async () => {', c.body(), '});'), Object.assign({ group: '被點擊與偵測' }, DP));
+def('disp_exists', 'disp', 'boolean', '畫面上有 {NAME}', { NAME: T('標籤1') }, (a) => '!!dispGet(' + a.NAME + ')', DP);
+def('disp_get', 'disp', 'reporter', '{NAME} 的{PROP}', { NAME: T('標籤1'), PROP: DD([['X 座標', 'x'], ['Y 座標', 'y'], ['旋轉角度', 'rot'], ['透明度', 'opacity'], ['大小（%）', 'scale']], 'x') }, (a) =>
+  'dispInfo(' + a.NAME + ', ' + a.PROP + ')', Object.assign({ rt: 'num' }, DP));
+def('disp_el', 'disp', 'reporter', '畫面項目 {NAME}（元素）', { NAME: T('標籤1') }, (a) => '(dispGet(' + a.NAME + ')?.el ?? null)', Object.assign({ rt: 'el' }, DP));
 
 /* =====================  網頁外觀（更多）  ===================== */
 def('dom_mark', 'dom', 'stack', '把頁面上的文字 {TEXT} 標上 {C} 螢光筆', { TEXT: T('重要'), C: COL('#fff176') }, (a) => 'highlightText(' + a.TEXT + ', ' + a.C + ');', { helpers: ['highlightText'] });
@@ -3731,6 +3833,221 @@ function onTextButton(name, callback) {
     if (btn && btn.getAttribute('data-tm-btn') === String(name)) callback(btn);
   }, true);
 }`);
+
+/* ---------- 顯示：畫面上的文字與圖片 ---------- */
+helper('dispCore', [], String.raw`
+// ----- 畫面上的文字與圖片：每個都有名稱，之後可以用名稱移動、旋轉、顯示、隱藏… -----
+const dispItems = Object.create(null);
+const dispClicks = Object.create(null);
+function dispGet(name) {
+  const it = dispItems[String(name)];
+  return it && it.el.isConnected ? it : null;
+}
+function dispMiss(name) { console.warn('找不到畫面上的文字或圖片：', name); }
+// 依目前的位置、旋轉、大小更新畫面
+function dispApply(it) {
+  const s = it.el.style;
+  let tx = 0, ty = 0;
+  s.left = s.right = s.top = s.bottom = '';
+  if (it.pos === 'xy') {
+    s.left = it.x + 'px';
+    s.top = it.y + 'px';
+    tx = ty = -50;
+  } else {
+    const v = it.pos.charAt(0), hz = it.pos.length > 1 ? it.pos.charAt(1) : 'c';
+    if (v === 't') s.top = '16px'; else if (v === 'b') s.bottom = '16px'; else { s.top = '50%'; ty = -50; }
+    if (hz === 'l') s.left = '16px'; else if (hz === 'r') s.right = '16px'; else { s.left = '50%'; tx = -50; }
+  }
+  s.translate = tx + '% ' + ty + '%';
+  s.rotate = it.rot + 'deg';
+  s.scale = String(it.scale);
+}
+function dispMake(name, tag, kind) {
+  name = String(name);
+  dispRemove(name);
+  const el = document.createElement(tag);
+  el.setAttribute('data-tm-disp', name);
+  el.style.cssText = 'position:fixed;z-index:2147483646;pointer-events:none;margin:0;';
+  const it = { el, kind, pos: 'c', x: 0, y: 0, rot: 0, scale: 1, spin: null, wired: false };
+  dispItems[name] = it;
+  document.documentElement.appendChild(el);
+  if (dispClicks[name]) dispWire(it, name);
+  return it;
+}
+// 新增文字（同名的會被換掉）。pos：c 中間 / tc 上中 / bc 下中 / tl tr bl br 四個角落
+function dispText(name, text, pos = 'c') {
+  const it = dispMake(name, 'div', 'text');
+  it.el.style.cssText += 'padding:8px 14px;border-radius:10px;background:rgba(0,0,0,.7);color:#fff;font:600 24px/1.3 system-ui,sans-serif;white-space:pre-wrap;max-width:80vw;';
+  it.el.textContent = String(text);
+  it.pos = pos;
+  dispApply(it);
+  return it.el;
+}
+// 新增圖片。src 可以是圖片網址、data: 圖片，或 Emoji / 文字
+function dispImage(name, src, width = 120, pos = 'c') {
+  width = Number(width) || 120;
+  src = String(src);
+  const isUrl = /^(https?:|data:|blob:|\/)/i.test(src);
+  const it = dispMake(name, isUrl ? 'img' : 'div', isUrl ? 'img' : 'emoji');
+  if (isUrl) {
+    it.el.src = src;
+    it.el.style.cssText += 'width:' + width + 'px;height:auto;max-width:none;';
+  } else {
+    it.el.textContent = src;
+    it.el.style.cssText += 'font-size:' + width + 'px;line-height:1;';
+  }
+  it.pos = pos;
+  dispApply(it);
+  return it.el;
+}
+function dispContent(name, value) {
+  const it = dispGet(name);
+  if (!it) return dispMiss(name);
+  if (it.kind === 'img') it.el.src = String(value); else it.el.textContent = String(value);
+}
+// 目前的中心點（以視窗左上角為 0,0）
+function dispCenter(it) {
+  const prev = it.el.style.display;
+  it.el.style.display = '';
+  const r = it.el.getBoundingClientRect();
+  it.el.style.display = prev;
+  return [r.left + r.width / 2, r.top + r.height / 2];
+}
+function dispToXY(it) {
+  if (it.pos === 'xy') return;
+  const c = dispCenter(it);
+  it.x = c[0];
+  it.y = c[1];
+  it.pos = 'xy';
+}
+function dispGoto(name, pos) {
+  const it = dispGet(name);
+  if (!it) return dispMiss(name);
+  it.pos = pos;
+  dispApply(it);
+}
+function dispXY(name, x, y) {
+  const it = dispGet(name);
+  if (!it) return dispMiss(name);
+  it.pos = 'xy';
+  it.x = Number(x) || 0;
+  it.y = Number(y) || 0;
+  dispApply(it);
+}
+function dispMove(name, dir, n) {
+  const it = dispGet(name);
+  if (!it) return dispMiss(name);
+  dispToXY(it);
+  n = Number(n) || 0;
+  if (dir === 'r') it.x += n; else if (dir === 'l') it.x -= n; else if (dir === 'd') it.y += n; else it.y -= n;
+  dispApply(it);
+}
+// 用 sec 秒慢慢滑到指定的位置（會等滑完才做下一個積木）
+async function dispGlide(name, x, y, sec) {
+  const it = dispGet(name);
+  if (!it) return dispMiss(name);
+  sec = Math.max(0, Number(sec) || 0);
+  dispToXY(it);
+  dispApply(it);
+  it.el.getBoundingClientRect();
+  it.el.style.transition = 'left ' + sec + 's ease, top ' + sec + 's ease';
+  it.x = Number(x) || 0;
+  it.y = Number(y) || 0;
+  dispApply(it);
+  await new Promise((r) => setTimeout(r, sec * 1000));
+  it.el.style.transition = '';
+}
+// 停止不停旋轉，並記住目前的角度
+function dispStopSpin(it) {
+  if (!it.spin) return;
+  const m = /(-?[\d.]+)deg/.exec(getComputedStyle(it.el).rotate || '');
+  if (m) it.rot = Number(m[1]) % 360;
+  it.spin.cancel();
+  it.spin = null;
+  dispApply(it);
+}
+// how：to 轉到 / cw 順時針轉 / ccw 逆時針轉
+function dispRotate(name, how, deg) {
+  const it = dispGet(name);
+  if (!it) return dispMiss(name);
+  dispStopSpin(it);
+  deg = Number(deg) || 0;
+  if (how === 'to') it.rot = deg; else if (how === 'cw') it.rot += deg; else it.rot -= deg;
+  dispApply(it);
+}
+// 不停旋轉：act 是 cw / ccw / stop，sec 是轉一圈要幾秒
+function dispSpin(name, act, sec) {
+  const it = dispGet(name);
+  if (!it) return dispMiss(name);
+  dispStopSpin(it);
+  if (act === 'stop') return;
+  const dir = act === 'ccw' ? -1 : 1;
+  sec = Math.max(0.1, Number(sec) || 3);
+  it.spin = it.el.animate([{ rotate: it.rot + 'deg' }, { rotate: (it.rot + 360 * dir) + 'deg' }], { duration: sec * 1000, iterations: Infinity });
+}
+// act：show 顯示 / hide 隱藏 / toggle 切換 / remove 移除
+function dispShow(name, act) {
+  if (act === 'remove') return dispRemove(name);
+  const it = dispGet(name);
+  if (!it) return dispMiss(name);
+  const hide = act === 'hide' || (act === 'toggle' && it.el.style.display !== 'none');
+  it.el.style.display = hide ? 'none' : '';
+}
+function dispOpacity(name, pct) {
+  const it = dispGet(name);
+  if (!it) return dispMiss(name);
+  it.el.style.opacity = String(Math.min(100, Math.max(0, Number(pct) || 0)) / 100);
+}
+function dispSize(name, pct) {
+  const it = dispGet(name);
+  if (!it) return dispMiss(name);
+  it.scale = Math.max(0, Number(pct) || 0) / 100;
+  dispApply(it);
+}
+// which：fg 文字顏色 / bg 背景色 / border 邊框顏色
+function dispStyle(name, which, value) {
+  const it = dispGet(name);
+  if (!it) return dispMiss(name);
+  const s = it.el.style;
+  if (which === 'fg') s.setProperty('color', value, 'important');
+  else if (which === 'bg') s.setProperty('background', value, 'important');
+  else if (which === 'border') s.setProperty('border', '3px solid ' + value, 'important');
+}
+function dispRemove(name) {
+  const it = dispItems[String(name)];
+  if (!it) return;
+  if (it.spin) it.spin.cancel();
+  it.el.remove();
+  delete dispItems[String(name)];
+}
+function dispClear() {
+  Object.keys(dispItems).forEach(dispRemove);
+}
+// 被點擊時執行（項目可以之後才新增）
+function dispOnClick(name, callback) {
+  name = String(name);
+  (dispClicks[name] = dispClicks[name] || []).push(callback);
+  const it = dispGet(name);
+  if (it) dispWire(it, name);
+}
+function dispWire(it, name) {
+  if (it.wired) return;
+  it.wired = true;
+  it.el.style.pointerEvents = 'auto';
+  it.el.style.cursor = 'pointer';
+  it.el.addEventListener('click', (e) => { (dispClicks[name] || []).forEach((cb) => cb(e)); });
+}
+// prop：x / y / rot / opacity / scale
+function dispInfo(name, prop) {
+  const it = dispGet(name);
+  if (!it) { dispMiss(name); return 0; }
+  if (prop === 'x' || prop === 'y') { const c = dispCenter(it); return Math.round(prop === 'x' ? c[0] : c[1]); }
+  if (prop === 'rot') { const m = it.spin && /(-?[\d.]+)deg/.exec(getComputedStyle(it.el).rotate || ''); return Math.round(m ? Number(m[1]) % 360 : it.rot); }
+  if (prop === 'opacity') return Math.round(Number(it.el.style.opacity === '' ? 1 : it.el.style.opacity) * 100);
+  if (prop === 'scale') return Math.round(it.scale * 100);
+  return 0;
+}`);
+['dispItems', 'dispClicks', 'dispGet', 'dispMiss', 'dispApply', 'dispMake', 'dispText', 'dispImage', 'dispContent', 'dispCenter', 'dispToXY', 'dispGoto', 'dispXY', 'dispMove', 'dispGlide', 'dispStopSpin', 'dispRotate', 'dispSpin', 'dispShow', 'dispOpacity', 'dispSize', 'dispStyle', 'dispRemove', 'dispClear', 'dispOnClick', 'dispWire', 'dispInfo'].forEach((n) => { HELP[n] = HELP.dispCore; });
 
 helper('addFab', ['tbtnCore'], String.raw`
 // 在畫面角落放一個浮動按鈕（名稱就是按鈕一開始的文字；同名的會自動加上 #2、#3…）
@@ -5389,9 +5706,9 @@ function renderCats() {
   nav.textContent = '';
   allCats().forEach((c) => {
     const btn = h('button', {
-      class: 'cat' + (c.id === view.cat && !view.search ? ' on' : ''), dataset: { cat: c.id }, title: c.name,
+      class: 'cat' + (c.id === view.cat && !view.search ? ' on' : ''), dataset: { cat: c.id }, title: catLabel(c),
       onclick: () => { view.cat = c.id; view.search = ''; $('#palSearch').value = ''; $('#main').classList.remove('pal-off'); renderCats(); renderPalette(); },
-    }, h('span', { class: 'dot' }), h('span', { text: c.name }));
+    }, h('span', { class: 'dot' }), h('span', { text: catLabel(c) }));
     btn.style.setProperty('--cc', c.color);
     nav.append(btn);
   });
@@ -5432,7 +5749,7 @@ function renderPalette() {
       h('span', { text: '💡 點一下積木就會加入；想放到指定位置，請「長按積木再拖曳」。' }),
       h('button', { class: 'btn sm flat', 'aria-label': '關閉提示', text: '✕', onclick: (e) => { storeSet('tmblocks.touchHint', '1'); e.currentTarget.parentElement.remove(); } })));
   }
-  list.append(h('div', { class: 'pal-title', text: cat.name }));
+  list.append(h('div', { class: 'pal-title', text: catLabel(cat) }));
   if (cat.tip) list.append(h('p', { class: 'pal-tip', text: cat.tip, onclick: (e) => e.currentTarget.classList.toggle('open') }));
   if (cat.id === 'var') {
     list.append(h('div', { class: 'pal-btns' },
@@ -5847,7 +6164,7 @@ function openHelp() {
       h('li', null, h('div', null, h('b', { text: '匯出。' }), ' 按「匯出」複製或下載程式碼，貼到竄改猴就完成了。'))),
     h('div', { class: 'callout' },
       h('b', { text: '想做全自動的腳本？' }), h('br'),
-      '看「事件」的定時與監控、「控制」的等待與出錯處理、「鍵盤滑鼠」的模擬按鍵，以及「圖片按鈕」的文字找按鈕、圖片按鈕。「範例」裡有現成的組合可以參考。'),
+      '看「事件」的定時與監控、「控制」的等待與出錯處理、「鍵盤滑鼠」的模擬按鍵，以及「按鈕」的文字找按鈕、圖片按鈕。「範例」裡有現成的組合可以參考。'),
     h('div', { class: 'callout' },
       h('b', { text: '想要自己做積木？' }), h('br'),
       '按上方「自訂積木」，可以匯入 TurboWarp 風格的 JavaScript 檔，檔案裡描述的積木會直接出現在積木庫裡。編輯器只會讀取積木的描述，不會執行你匯入的程式碼。'),
@@ -6500,6 +6817,25 @@ const EXAMPLES = [
         meta: { name: '回到頂端按鈕', description: '在畫面右下角加入一個圖片按鈕，按下回到頁面最上方', icon: '⬆️' },
         variables: [],
         scripts: [SC(28, 30, B('hat_fab_img', { POS: 'br', IMG: '⬆️', SIZE: '48' }), B('act_scroll', { WHERE: 'top' }))],
+      };
+    },
+  },
+  {
+    title: '顯示：會轉的星星和標題',
+    desc: '在畫面上新增一段標題文字和一顆會不停旋轉的星星；點星星就會彈出提示，並讓標題換字。',
+    build() {
+      return {
+        meta: { name: '畫面上的標題與星星', description: '在畫面上新增標題文字和旋轉的星星，點星星會換標題', icon: '⭐' },
+        variables: [],
+        scripts: [
+          SC(28, 30, B('hat_start'),
+            B('disp_text', { NAME: '標題', TEXT: '歡迎回來！', POS: 'tc' }),
+            B('disp_image', { NAME: '星星', IMG: '⭐', W: 96, POS: 'c' }),
+            B('disp_spin', { ACT: 'cw', NAME: '星星', S: 3 })),
+          SC(28, 260, B('hat_disp', { NAME: '星星' }),
+            B('disp_content', { NAME: '標題', TEXT: '你點到星星了！' }),
+            B('disp_glide', { NAME: '星星', S: 1, X: 300, Y: 300 })),
+        ],
       };
     },
   },

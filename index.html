@@ -1925,6 +1925,13 @@ Object.assign(I18N.bundled.en, {
   "被點擊時執行（項目可以之後才新增）": "Runs when clicked (the item can be added later)",
   "prop：x / y / rot / opacity / scale": "prop: x / y / rot / opacity / scale"
 });
+Object.assign(I18N.bundled.en, {
+  "在 {S} 秒內輸入的字元數量": "Characters typed in the last {S} sec",
+  "記錄輸入了幾個字元（腳本啟動之後才開始計算）": "Record how many characters were typed (counting starts when the script starts)",
+  "輸入法組字中先不算，選好字送出時才算": "Don't count while an input method is composing; count when the text is committed",
+  "不在輸入框裡打字時（例如遊戲網頁），按下一般字元鍵也算一個": "When not typing in a text field (e.g. a game page), pressing a normal character key counts as one",
+  "最近 sec 秒內輸入的字元數量": "Number of characters typed in the last sec seconds"
+});
 
 /* =====================================================================
    積木分類、參數型別與所有內建積木
@@ -2535,6 +2542,7 @@ def('time_between', 'sense', 'boolean', '現在時間在 {H1}:{M1} 到 {H2}:{M2}
   'timeBetween(' + a.H1 + ', ' + a.M1 + ', ' + a.H2 + ', ' + a.M2 + ')', { helpers: ['timeBetween'] });
 def('media_time', 'sense', 'reporter', '影片 {SEL} 的{PART}', { SEL: SEL('video'), PART: DD([['目前播放秒數', 'time'], ['總長度（秒）', 'duration'], ['播放速度', 'rate'], ['音量（0 到 1）', 'volume']], 'time') }, (a) =>
   'mediaInfo(' + a.SEL + ', ' + a.PART + ')', { rt: 'num', helpers: ['mediaInfo'] });
+def('typed_count', 'sense', 'reporter', '在 {S} 秒內輸入的字元數量', { S: N(5) }, (a) => 'typedCount(' + a.S + ')', { rt: 'num', helpers: ['typedCount'] });
 
 /* =====================  運 算（更多）  ===================== */
 def('op_split_get', 'op', 'reporter', '把 {A} 用 {SEP} 切開，取第 {N} 段', { A: T('a,b,c'), SEP: T(','), N: N(2) }, (a) =>
@@ -3833,6 +3841,37 @@ function onTextButton(name, callback) {
     if (btn && btn.getAttribute('data-tm-btn') === String(name)) callback(btn);
   }, true);
 }`);
+
+/* ---------- 偵測：最近輸入了幾個字元 ---------- */
+helper('typedCount', [], String.raw`
+// ----- 記錄輸入了幾個字元（腳本啟動之後才開始計算） -----
+const typedLog = [];
+function typedAdd(n) {
+  if (!n) return;
+  const now = Date.now();
+  typedLog.push([now, n]);
+  while (typedLog.length && now - typedLog[0][0] > 3600000) typedLog.shift();
+}
+function typedEditable(el) {
+  return !!(el && (el.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(el.tagName)));
+}
+document.addEventListener('input', (e) => {
+  // 輸入法組字中先不算，選好字送出時才算
+  if (e.isComposing || e.inputType !== 'insertText') return;
+  typedAdd(e.data ? e.data.length : 0);
+}, true);
+document.addEventListener('compositionend', (e) => typedAdd(e.data ? e.data.length : 0), true);
+document.addEventListener('keydown', (e) => {
+  // 不在輸入框裡打字時（例如遊戲網頁），按下一般字元鍵也算一個
+  if (e.isComposing || e.ctrlKey || e.metaKey || e.altKey || !e.key || e.key.length !== 1 || typedEditable(e.target)) return;
+  typedAdd(1);
+}, true);
+// 最近 sec 秒內輸入的字元數量
+function typedCount(sec) {
+  const from = Date.now() - (Number(sec) || 0) * 1000;
+  return typedLog.reduce((sum, x) => (x[0] >= from ? sum + x[1] : sum), 0);
+}`);
+['typedLog', 'typedAdd', 'typedEditable'].forEach((n) => { HELP[n] = HELP.typedCount; });
 
 /* ---------- 顯示：畫面上的文字與圖片 ---------- */
 helper('dispCore', [], String.raw`

@@ -1932,6 +1932,12 @@ Object.assign(I18N.bundled.en, {
   "不在輸入框裡打字時（例如遊戲網頁），按下一般字元鍵也算一個": "When not typing in a text field (e.g. a game page), pressing a normal character key counts as one",
   "最近 sec 秒內輸入的字元數量": "Number of characters typed in the last sec seconds"
 });
+Object.assign(I18N.bundled.en, {
+  "當輸入字元": "When a character is typed",
+  "剛輸入的字元": "The character just typed",
+  "輸入字元時執行": "Runs when a character is typed",
+  "剛輸入的字元（輸入法一次送出多個字時，就是那一串字）": "The character just typed (when an input method commits several characters at once, the whole string)"
+});
 
 /* =====================================================================
    積木分類、參數型別與所有內建積木
@@ -2057,6 +2063,7 @@ def('hat_key', 'event', 'hat', '當按下 {KEY} 鍵，搭配 {MOD}', { KEY: DD(K
   const pre = 'if (' + cond.join(' || ') + ') return;' + (ctrl || alt ? '\ne.preventDefault();' : '');
   return fnb("document.addEventListener('keydown', async (e) => {", pre + '\n' + c.body(), '});');
 }, { helpers: ['isTyping'] });
+def('hat_typed', 'event', 'hat', '當輸入字元', {}, (a, c) => fnb('onTyped(async () => {', c.body(), '});'), { helpers: ['typedCount'] });
 def('hat_click', 'event', 'hat', '當點擊 {SEL} 時', { SEL: P('#button') }, (a, c) =>
   fnb("document.addEventListener('click', async (e) => {", 'const el = e.target.closest(' + a.SEL + ');\nif (!el) return;\n' + c.body({ kind: 'el', name: 'el' }), '}, true);'));
 def('hat_appear', 'event', 'hat', '當 {SEL} 出現時', { SEL: P('#popup') }, (a, c) =>
@@ -2543,6 +2550,7 @@ def('time_between', 'sense', 'boolean', '現在時間在 {H1}:{M1} 到 {H2}:{M2}
 def('media_time', 'sense', 'reporter', '影片 {SEL} 的{PART}', { SEL: SEL('video'), PART: DD([['目前播放秒數', 'time'], ['總長度（秒）', 'duration'], ['播放速度', 'rate'], ['音量（0 到 1）', 'volume']], 'time') }, (a) =>
   'mediaInfo(' + a.SEL + ', ' + a.PART + ')', { rt: 'num', helpers: ['mediaInfo'] });
 def('typed_count', 'sense', 'reporter', '在 {S} 秒內輸入的字元數量', { S: N(5) }, (a) => 'typedCount(' + a.S + ')', { rt: 'num', helpers: ['typedCount'] });
+def('typed_last', 'sense', 'reporter', '剛輸入的字元', {}, () => 'typedLast()', { rt: 'str', helpers: ['typedCount'] });
 
 /* =====================  運 算（更多）  ===================== */
 def('op_split_get', 'op', 'reporter', '把 {A} 用 {SEP} 切開，取第 {N} 段', { A: T('a,b,c'), SEP: T(','), N: N(2) }, (a) =>
@@ -3846,11 +3854,16 @@ function onTextButton(name, callback) {
 helper('typedCount', [], String.raw`
 // ----- 記錄輸入了幾個字元（腳本啟動之後才開始計算） -----
 const typedLog = [];
-function typedAdd(n) {
-  if (!n) return;
+const typedHandlers = [];
+let typedLastChar = '';
+function typedAdd(chars) {
+  chars = String(chars || '');
+  if (!chars) return;
   const now = Date.now();
-  typedLog.push([now, n]);
+  typedLog.push([now, chars.length]);
   while (typedLog.length && now - typedLog[0][0] > 3600000) typedLog.shift();
+  typedLastChar = chars;
+  typedHandlers.forEach((fn) => { try { fn(chars); } catch (err) { console.error(err); } });
 }
 function typedEditable(el) {
   return !!(el && (el.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(el.tagName)));
@@ -3858,20 +3871,28 @@ function typedEditable(el) {
 document.addEventListener('input', (e) => {
   // 輸入法組字中先不算，選好字送出時才算
   if (e.isComposing || e.inputType !== 'insertText') return;
-  typedAdd(e.data ? e.data.length : 0);
+  typedAdd(e.data);
 }, true);
-document.addEventListener('compositionend', (e) => typedAdd(e.data ? e.data.length : 0), true);
+document.addEventListener('compositionend', (e) => typedAdd(e.data), true);
 document.addEventListener('keydown', (e) => {
   // 不在輸入框裡打字時（例如遊戲網頁），按下一般字元鍵也算一個
   if (e.isComposing || e.ctrlKey || e.metaKey || e.altKey || !e.key || e.key.length !== 1 || typedEditable(e.target)) return;
-  typedAdd(1);
+  typedAdd(e.key);
 }, true);
+// 輸入字元時執行
+function onTyped(callback) {
+  typedHandlers.push(callback);
+}
+// 剛輸入的字元（輸入法一次送出多個字時，就是那一串字）
+function typedLast() {
+  return typedLastChar;
+}
 // 最近 sec 秒內輸入的字元數量
 function typedCount(sec) {
   const from = Date.now() - (Number(sec) || 0) * 1000;
   return typedLog.reduce((sum, x) => (x[0] >= from ? sum + x[1] : sum), 0);
 }`);
-['typedLog', 'typedAdd', 'typedEditable'].forEach((n) => { HELP[n] = HELP.typedCount; });
+['typedLog', 'typedHandlers', 'typedLastChar', 'typedAdd', 'typedEditable', 'onTyped', 'typedLast'].forEach((n) => { HELP[n] = HELP.typedCount; });
 
 /* ---------- 顯示：畫面上的文字與圖片 ---------- */
 helper('dispCore', [], String.raw`

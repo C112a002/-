@@ -1938,6 +1938,25 @@ Object.assign(I18N.bundled.en, {
   "輸入字元時執行": "Runs when a character is typed",
   "剛輸入的字元（輸入法一次送出多個字時，就是那一串字）": "The character just typed (when an input method commits several characters at once, the whole string)"
 });
+Object.assign(I18N.bundled.en, {
+  "元素選擇器已啟動：請點選想要的元素（按住 Alt 可選到最上層的東西，按 Esc 取消）": "Element picker started: click the element you want (hold Alt to pick the topmost thing, press Esc to cancel)",
+  "這個框架（iframe）裡面的東西，腳本選不到。請改在那個框架自己的網址開啟，再用選擇器工具": "Things inside this frame (iframe) can't be picked by the script. Open the frame's own address instead and use the picker there",
+  "選擇器：": "Selector: ",
+  "（這個元素在 Shadow DOM 裡，選擇器可能無法使用）": " (this element is inside a Shadow DOM, so the selector may not work)",
+  "請手動複製這個選擇器：": "Please copy this selector manually:",
+  "元素選擇器工具：滑鼠移到元素上會框起來，點一下就複製它的選擇器（按住 Alt 可以選到最上層的東西）": "Element picker tool: hovering highlights an element, and a click copies its selector (hold Alt to pick the topmost thing)",
+  "找出真正要選的元素：輸入框常被外框、圖示或透明的蓋子擋住，所以游標下面有輸入框就優先選它": "Find the element you really mean: inputs are often covered by wrappers, icons or transparent overlays, so an input under the cursor is picked first",
+  "一層一層往上找，找到唯一的寫法就停": "Walk up level by level and stop at the first unique selector",
+  "先試 id、name、placeholder、aria-label 這種比較不容易隨網站改版而失效的寫法": "Try id, name, placeholder and aria-label first, which break less when the site is redesigned",
+  "點下去之後的放開和 click 還會再來，多擋一下子，網頁才不會跟著動作": "The release and click events still follow the press, so block them for a moment to keep the page from reacting"
+});
+Object.assign(I18N.bundled.en, {
+  "用一層透明的蓋子接住滑鼠，網頁和框架（iframe）才不會搶走點擊": "Catch the mouse with a transparent shield so the page and frames (iframes) can't steal the click",
+  "點下去之後的放開和 click 還會再來，蓋子多留一下子，網頁才不會跟著動作": "The release and click events still follow the press, so keep the shield up a moment longer to keep the page from reacting"
+});
+Object.assign(I18N.bundled.en, {
+  "查詢游標下的元素時，先讓蓋子暫時「穿透」，才看得到後面的東西（包含 Shadow DOM 裡的）": "When looking up the element under the cursor, let the shield pass through temporarily so what's behind it (including inside Shadow DOM) can be seen"
+});
 
 /* =====================================================================
    積木分類、參數型別與所有內建積木
@@ -2882,14 +2901,42 @@ function darkMode(mode) {
   }
 }`);
 
-helper('startPicker', ['copyText', 'toast'], String.raw`
-// 元素選擇器工具：滑鼠移到元素上會框起來，點一下就複製它的選擇器
+helper('startPicker', ['toast'], String.raw`
+// 元素選擇器工具：滑鼠移到元素上會框起來，點一下就複製它的選擇器（按住 Alt 可以選到最上層的東西）
 function startPicker() {
+  // 用一層透明的蓋子接住滑鼠，網頁和框架（iframe）才不會搶走點擊
+  const shield = document.createElement('div');
+  shield.style.cssText = 'position:fixed;inset:0;z-index:2147483646;background:transparent;cursor:crosshair;touch-action:none;';
   const box = document.createElement('div');
-  box.style.cssText = 'position:fixed;pointer-events:none;z-index:2147483646;border:2px solid #f08c00;background:rgba(240,140,0,.18);border-radius:3px;display:none;';
+  box.style.cssText = 'position:fixed;pointer-events:none;z-index:2147483647;border:2px solid #f08c00;background:rgba(240,140,0,.18);border-radius:3px;display:none;';
+  document.documentElement.appendChild(shield);
   document.documentElement.appendChild(box);
-  toast('元素選擇器已啟動：請點選想要的元素（按 Esc 取消）', 4);
-  const cssPath = (node) => {
+  toast('元素選擇器已啟動：請點選想要的元素（按住 Alt 可選到最上層的東西，按 Esc 取消）', 5);
+  const EDIT = 'input,textarea,select,[contenteditable=""],[contenteditable="true"],[role="textbox"],[role="searchbox"],[role="combobox"]';
+  // 找出真正要選的元素：輸入框常被外框、圖示或透明的蓋子擋住，所以游標下面有輸入框就優先選它
+  const findAt = (e) => {
+    const list = document.elementsFromPoint(e.clientX, e.clientY).filter((n) => n !== shield && n !== box);
+    let top = list[0];
+    while (top && top.shadowRoot) {
+      const inner = top.shadowRoot.elementsFromPoint(e.clientX, e.clientY)[0];
+      if (!inner || inner === top) break;
+      top = inner;
+    }
+    if (!top || e.altKey) return top;
+    const edit = top.closest && top.closest(EDIT);
+    if (edit) return edit;
+    if (top.tagName === 'LABEL' && top.control) return top.control;
+    if (top.closest && top.closest('button,a,[role="button"]')) return top;
+    return list.find((x) => x.matches && x.matches(EDIT)) || top;
+  };
+  // 查詢游標下的元素時，先讓蓋子暫時「穿透」，才看得到後面的東西（包含 Shadow DOM 裡的）
+  const find = (e) => {
+    shield.style.pointerEvents = 'none';
+    try { return findAt(e); } finally { shield.style.pointerEvents = ''; }
+  };
+  const unique = (s) => { try { return document.querySelectorAll(s).length === 1; } catch (err) { return false; } };
+  // 一層一層往上找，找到唯一的寫法就停
+  const pathOf = (node) => {
     const parts = [];
     let el = node;
     while (el && el.nodeType === 1 && el !== document.documentElement) {
@@ -2903,40 +2950,69 @@ function startPicker() {
         if (same.length > 1) part += ':nth-of-type(' + (same.indexOf(el) + 1) + ')';
       }
       parts.unshift(part);
-      try { if (document.querySelectorAll(parts.join(' > ')).length === 1) break; } catch (e) { /* 略過 */ }
+      if (unique(parts.join(' > '))) break;
       el = el.parentElement;
     }
     return parts.join(' > ');
   };
+  // 先試 id、name、placeholder、aria-label 這種比較不容易隨網站改版而失效的寫法
+  const cssPath = (node) => {
+    const tag = node.tagName.toLowerCase();
+    if (node.id && !/\d{4,}|^[:\d]|[0-9a-f]{10,}/i.test(node.id) && unique('#' + CSS.escape(node.id))) return '#' + CSS.escape(node.id);
+    for (const name of ['name', 'data-testid', 'placeholder', 'aria-label', 'type']) {
+      const v = node.getAttribute(name);
+      if (v && v.length < 60) {
+        const s = tag + '[' + name + '=' + JSON.stringify(v) + ']';
+        if (unique(s)) return s;
+      }
+    }
+    return pathOf(node);
+  };
   const move = (e) => {
-    const r = e.target.getBoundingClientRect();
+    e.stopPropagation();
+    const target = find(e);
+    if (!target) return;
+    const r = target.getBoundingClientRect();
     box.style.display = 'block';
     box.style.left = r.left + 'px';
     box.style.top = r.top + 'px';
     box.style.width = r.width + 'px';
     box.style.height = r.height + 'px';
   };
-  const stop = () => {
-    document.removeEventListener('mousemove', move, true);
-    document.removeEventListener('click', pick, true);
-    document.removeEventListener('keydown', key, true);
+  // 點下去之後的放開和 click 還會再來，蓋子多留一下子，網頁才不會跟著動作
+  const stop = (wait = 600) => {
+    window.removeEventListener('keydown', key, true);
     box.remove();
+    if (wait > 0) setTimeout(() => shield.remove(), wait); else shield.remove();
   };
   const pick = (e) => {
-    e.preventDefault();
     e.stopPropagation();
-    const selector = cssPath(e.target);
+    if (e.button !== 0) return;
+    const el = find(e);
+    if (!el) return;
+    if (el.tagName === 'IFRAME' || el.tagName === 'FRAME') {
+      toast('這個框架（iframe）裡面的東西，腳本選不到。請改在那個框架自己的網址開啟，再用選擇器工具', 6);
+      return;
+    }
+    const selector = cssPath(el);
+    const shadow = el.getRootNode() instanceof ShadowRoot;
     stop();
-    copyText(selector);
-    toast('已複製選擇器：' + selector, 5);
-    console.log('[元素選擇器]', selector);
+    const done = (copied) => {
+      toast((copied ? '已複製選擇器：' : '選擇器：') + selector + (shadow ? '（這個元素在 Shadow DOM 裡，選擇器可能無法使用）' : ''), 7);
+      console.log('[元素選擇器]', selector);
+    };
+    const manual = () => { done(false); window.prompt('請手動複製這個選擇器：', selector); };
+    if (typeof GM_setClipboard === 'function') { GM_setClipboard(selector); done(true); }
+    else if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(selector).then(() => done(true), manual);
+    else manual();
   };
   const key = (e) => {
-    if (e.key === 'Escape') { stop(); toast('已取消元素選擇器'); }
+    if (e.key === 'Escape') { stop(0); toast('已取消元素選擇器'); }
   };
-  document.addEventListener('mousemove', move, true);
-  document.addEventListener('click', pick, true);
-  document.addEventListener('keydown', key, true);
+  shield.addEventListener('pointermove', move);
+  shield.addEventListener('pointerdown', pick);
+  ['pointerup', 'mousedown', 'mouseup', 'click', 'dblclick', 'contextmenu'].forEach((t) => shield.addEventListener(t, (e) => { e.preventDefault(); e.stopPropagation(); }));
+  window.addEventListener('keydown', key, true);
 }`);
 
 /* 匯出腳本裡的 Scratch 相容層（TurboWarp 風格的擴充積木用） */

@@ -984,7 +984,6 @@ I18N.bundled.en = Object.assign(Object.create(null), {
 "變數像是會記住東西的盒子，例如「分數」。清單可以放很多項目。": "A variable is like a box that remembers something, such as \"score\". A list can hold many items.",
 "把一組積木包成一個函式，之後用「執行函式」重複使用。": "Wrap a group of blocks into a function, then reuse it with \"Run function\".",
 "連到網路抓資料，或把資料永久存在瀏覽器（關掉網頁也還在）。": "Fetch data from the internet, or save data permanently in the browser (it stays even after you close the page).",
-"註解、元素選擇器工具，以及直接寫 JavaScript 的積木。": "Comments, the element picker tool, and blocks for writing JavaScript directly.",
 "在畫面{POS}放一個文字按鈕 {TEXT}，按下時": "Put a text button {TEXT} at the {POS} of the screen; when pressed",
 "快速做一個按鈕": "Make a button quickly",
 "右下角": "bottom right",
@@ -1957,6 +1956,15 @@ Object.assign(I18N.bundled.en, {
 Object.assign(I18N.bundled.en, {
   "查詢游標下的元素時，先讓蓋子暫時「穿透」，才看得到後面的東西（包含 Shadow DOM 裡的）": "When looking up the element under the cursor, let the shield pass through temporarily so what's behind it (including inside Shadow DOM) can be seen"
 });
+Object.assign(I18N.bundled.en, {
+  "匯出時加密混淆整支程式碼（{LEVEL}）": "Encrypt & obfuscate the whole script on export ({LEVEL})",
+  "一般：加密所有文字字串": "Normal: encrypt all text strings",
+  "高強度：加密字串＋打亂工具函式與變數名稱": "Heavy: encrypt strings + scramble helper function & variable names",
+  "保護與混淆": "Protection & obfuscation",
+  "已套用程式碼混淆（字串加密）": "Code obfuscation applied (string encryption)",
+  "已套用程式碼混淆（高強度：字串加密＋函式與變數改名）": "Code obfuscation applied (heavy: string encryption + renamed functions & variables)",
+  "註解、元素選擇器工具、直接寫 JavaScript 的積木，以及匯出時加密混淆整支程式碼的功能。": "Comments, the element picker tool, blocks for writing JavaScript directly, and a feature to encrypt and obfuscate the whole script on export."
+});
 
 /* =====================================================================
    積木分類、參數型別與所有內建積木
@@ -1976,7 +1984,7 @@ const CATS = [
   { id: 'var', name: '變數', color: '#d9482b', tip: '變數像是會記住東西的盒子，例如「分數」。清單可以放很多項目。' },
   { id: 'func', name: '函式', color: '#e0446a', tip: '把一組積木包成一個函式，之後用「執行函式」重複使用。' },
   { id: 'net', name: '網路儲存', color: '#0f8f8f', tip: '連到網路抓資料，或把資料永久存在瀏覽器（關掉網頁也還在）。' },
-  { id: 'tool', name: '進階', color: '#5b6472', tip: '註解、元素選擇器工具，以及直接寫 JavaScript 的積木。' },
+  { id: 'tool', name: '進階', color: '#5b6472', tip: '註解、元素選擇器工具、直接寫 JavaScript 的積木，以及匯出時加密混淆整支程式碼的功能。' },
 ];
 const extCats = [];
 const allCats = () => CATS.concat(extCats);
@@ -2291,6 +2299,9 @@ def('tool_picker', 'tool', 'stack', '啟動元素選擇器工具（點網頁上�
 def('js_cmd', 'tool', 'stack', '執行 JavaScript {CODE}', { CODE: AR('console.log("Hello");') }, (a, c, r) => String(r.CODE == null ? '' : r.CODE).trim() || '// （空的 JavaScript 積木）');
 def('js_val', 'tool', 'reporter', 'JavaScript 值 {CODE}', { CODE: P('document.title') }, (a, c, r) => '(' + (String(r.CODE == null ? '' : r.CODE).trim() || 'undefined') + ')');
 def('js_bool', 'tool', 'boolean', 'JavaScript 條件 {CODE}', { CODE: P('window.innerWidth > 800') }, (a, c, r) => '(' + (String(r.CODE == null ? '' : r.CODE).trim() || 'false') + ')');
+def('tool_obfuscate', 'tool', 'stack', '匯出時加密混淆整支程式碼（{LEVEL}）',
+  { LEVEL: DD([['一般：加密所有文字字串', 'normal'], ['高強度：加密字串＋打亂工具函式與變數名稱', 'heavy']], 'normal') },
+  () => '', { group: '保護與混淆' });
 
 /* =====================================================================
    更多積木：全自動化、鍵盤滑鼠、按鈕與圖片…
@@ -4713,7 +4724,7 @@ function genStack(G, b) {
     if (d.type === 'hat' && out.length) continue;   // 事件積木不能放在中間
     const code = genBlock(G, b, d);
     if (code == null || code === '') continue;
-    if (G.opts.comments && b.op !== 'tool_comment') out.push('// ' + labelText(b, d));
+    if (G.opts.comments && !G.obfuscate && b.op !== 'tool_comment') out.push('// ' + labelText(b, d));
     out.push(code);
   }
   return out.join('\n');
@@ -4789,16 +4800,225 @@ function extractEmbedded(text) {
   return JSON.parse(b64ToUtf8(b64));
 }
 
+/* =====================================================================
+   程式碼混淆與字串加密（進階 →「匯出時加密混淆整支程式碼」積木）
+   ‧ 只處理 IIFE 主體內的文字（UserScript 標頭與專案還原資料不會被動到）
+   ‧ 用簡單的詞法掃描把原始碼切成 code / str（字串）/ tmpl（模板字串）/
+     comment（註解）/ regex（正則）幾種片段，混淆只會動到 code 和 str，
+     不會誤改到註解、模板字串或正則表達式裡的內容
+   ===================================================================== */
+function scanObfuscateLevel() {
+  let level = null;
+  walkAll((b) => {
+    if (b.op === 'tool_obfuscate') {
+      const lv = String((b.args && b.args.LEVEL) || 'normal');
+      if (lv === 'heavy') level = 'heavy';
+      else if (!level) level = 'normal';
+    }
+  });
+  return level;
+}
+function tokenizeJS(src) {
+  const toks = [];
+  const n = src.length;
+  let i = 0, codeStart = 0;
+  const flushCode = (end) => { if (end > codeStart) toks.push({ t: 'code', s: src.slice(codeStart, end) }); };
+  const KEYWORD_BEFORE_REGEX = /^(return|typeof|instanceof|in|of|new|delete|void|do|else|yield|await|case|throw|default)$/;
+  function regexAllowedHere() {
+    let j = i - 1;
+    while (j >= 0 && /\s/.test(src[j])) j--;
+    if (j < 0) return true;
+    const c = src[j];
+    if ('([{,;:=&|!?+-*%^~<>'.includes(c)) return true;
+    if (/[\w$]/.test(c)) {
+      let k = j;
+      while (k >= 0 && /[\w$]/.test(src[k])) k--;
+      return KEYWORD_BEFORE_REGEX.test(src.slice(k + 1, j + 1));
+    }
+    return false;
+  }
+  while (i < n) {
+    const c = src[i];
+    if (c === '/' && src[i + 1] === '/') {
+      flushCode(i);
+      let j = src.indexOf('\n', i);
+      if (j === -1) j = n;
+      toks.push({ t: 'comment', s: src.slice(i, j) });
+      i = j; codeStart = i; continue;
+    }
+    if (c === '/' && src[i + 1] === '*') {
+      flushCode(i);
+      let j = src.indexOf('*/', i + 2);
+      j = (j === -1) ? n : j + 2;
+      toks.push({ t: 'comment', s: src.slice(i, j) });
+      i = j; codeStart = i; continue;
+    }
+    if (c === '"' || c === "'") {
+      flushCode(i);
+      const quote = c; let j = i + 1, closed = false;
+      while (j < n) {
+        if (src[j] === '\\') { j += 2; continue; }
+        if (src[j] === quote) { j++; closed = true; break; }
+        if (src[j] === '\n') break;
+        j++;
+      }
+      toks.push({ t: closed ? 'str' : 'code', s: src.slice(i, j) });
+      i = j; codeStart = i; continue;
+    }
+    if (c === '`') {
+      flushCode(i);
+      let j = i + 1, depth = 0;
+      while (j < n) {
+        if (src[j] === '\\') { j += 2; continue; }
+        if (src[j] === '`' && depth === 0) { j++; break; }
+        if (src[j] === '$' && src[j + 1] === '{') { depth++; j += 2; continue; }
+        if (src[j] === '}' && depth > 0) { depth--; j++; continue; }
+        j++;
+      }
+      toks.push({ t: 'tmpl', s: src.slice(i, j) });
+      i = j; codeStart = i; continue;
+    }
+    if (c === '/' && regexAllowedHere()) {
+      let j = i + 1, inClass = false, ok = false;
+      while (j < n) {
+        const cj = src[j];
+        if (cj === '\\') { j += 2; continue; }
+        if (cj === '\n') break;
+        if (cj === '[') { inClass = true; j++; continue; }
+        if (cj === ']') { inClass = false; j++; continue; }
+        if (cj === '/' && !inClass) { j++; ok = true; break; }
+        j++;
+      }
+      if (ok) {
+        let k = j;
+        while (k < n && /[a-z]/i.test(src[k])) k++;
+        flushCode(i);
+        toks.push({ t: 'regex', s: src.slice(i, k) });
+        i = k; codeStart = i; continue;
+      }
+    }
+    i++;
+  }
+  flushCode(n);
+  return toks;
+}
+function decodeJSStringLiteral(tok) {
+  const body = tok.slice(1, -1);
+  let out = '';
+  for (let i = 0; i < body.length; i++) {
+    const c = body[i];
+    if (c !== '\\') { out += c; continue; }
+    const nx = body[++i];
+    if (nx === 'n') out += '\n';
+    else if (nx === 't') out += '\t';
+    else if (nx === 'r') out += '\r';
+    else if (nx === 'b') out += '\b';
+    else if (nx === 'f') out += '\f';
+    else if (nx === 'v') out += '\v';
+    else if (nx === '0') out += '\0';
+    else if (nx === '\n') { /* 行接續，略過 */ }
+    else if (nx === 'x') { out += String.fromCharCode(parseInt(body.substr(i + 1, 2), 16) || 0); i += 2; }
+    else if (nx === 'u') {
+      if (body[i + 1] === '{') {
+        const e = body.indexOf('}', i + 1);
+        out += String.fromCodePoint(parseInt(body.slice(i + 2, e), 16) || 0);
+        i = e;
+      } else { out += String.fromCharCode(parseInt(body.substr(i + 1, 4), 16) || 0); i += 4; }
+    } else out += nx;
+  }
+  return out;
+}
+function obRandBytes(len) {
+  const a = [];
+  for (let i = 0; i < len; i++) a.push(1 + Math.floor(Math.random() * 251));
+  return a;
+}
+function obXorB64Encode(str, key) {
+  const bytes = new TextEncoder().encode(str);
+  let bin = '';
+  for (let i = 0; i < bytes.length; i++) bin += String.fromCharCode(bytes[i] ^ key[i % key.length]);
+  return btoa(bin);
+}
+function obShuffleWithMap(arr) {
+  const idx = arr.map((_, i) => i);
+  for (let i = idx.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); const t = idx[i]; idx[i] = idx[j]; idx[j] = t; }
+  const shuffled = idx.map((oi) => arr[oi]);
+  const newPos = new Array(arr.length);
+  idx.forEach((originalIndex, newIndex) => { newPos[originalIndex] = newIndex; });
+  return { shuffled, newPos };
+}
+/** 把產生好的程式碼主體做混淆：所有一般字串（單／雙引號）換成從加密陣列即時解密，
+ *  level 為 'heavy' 時，另外把共用的工具函式名稱換成隨機短名
+ *  （前面不是「.」、後面不是物件屬性「:」的地方才會改名，避免誤改到外部函式庫的同名方法）。 */
+function obfuscateBody(src, level, usedNames) {
+  const toks = tokenizeJS(src);
+  const strings = [];
+  toks.forEach((tok) => { if (tok.t === 'str') strings.push(decodeJSStringLiteral(tok.s)); });
+  const key = obRandBytes(4 + Math.floor(Math.random() * 5));
+  const encoded = strings.map((s) => obXorB64Encode(s, key));
+  const { shuffled, newPos } = obShuffleWithMap(encoded);
+  const fnName = safeIdent('ob_' + Math.random().toString(36).slice(2, 7), 'ob', usedNames);
+  const arrName = safeIdent('oba_' + Math.random().toString(36).slice(2, 7), 'oba', usedNames);
+  const keyName = safeIdent('obk_' + Math.random().toString(36).slice(2, 7), 'obk', usedNames);
+
+  let renameMap = null;
+  if (level === 'heavy') {
+    renameMap = new Map();
+    Object.keys(HELP).forEach((name) => {
+      const esc = name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      const usageRe = new RegExp('(?<!\\.)\\b' + esc + '\\b(?!\\s*:)');
+      if (!usageRe.test(src)) return;
+      // 安全檢查：「NAME(...) {」如果不是「function NAME(...) {」，有可能是別的物件／類別
+      // 剛好也有一個同名的簡寫方法（例如 { show(){...} }）。這種情況只改呼叫端會把方法改壞，
+      // 所以乾脆整個不改這個名字，寧可少混淆一點也不要弄壞腳本。
+      const shorthandRe = new RegExp('(function\\s+)?\\b' + esc + '\\s*\\([^()]*(?:\\([^()]*\\)[^()]*)*\\)\\s*\\{', 'g');
+      let ambiguous = false, mm;
+      while ((mm = shorthandRe.exec(src))) { if (!mm[1]) { ambiguous = true; break; } }
+      if (ambiguous) return;
+      renameMap.set(name, safeIdent('h_' + Math.random().toString(36).slice(2, 7), 'h', usedNames));
+    });
+  }
+
+  let strCursor = -1;
+  const out = toks.map((tok) => {
+    if (tok.t === 'str') {
+      strCursor++;
+      return fnName + '(' + newPos[strCursor] + ')';
+    }
+    if (tok.t === 'code' && renameMap && renameMap.size) {
+      let s = tok.s;
+      renameMap.forEach((to, from) => {
+        const esc = from.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        s = s.replace(new RegExp('(?<!\\.)\\b' + esc + '\\b(?!\\s*:)', 'g'), to);
+      });
+      return s;
+    }
+    return tok.s;
+  });
+
+  const decoderStub =
+    'const ' + keyName + ' = [' + key.join(',') + '];\n' +
+    'const ' + arrName + ' = [' + shuffled.map((s) => JSON.stringify(s)).join(',') + '];\n' +
+    'function ' + fnName + '(i) {\n' +
+    '  const bin = atob(' + arrName + '[i]);\n' +
+    '  const bytes = new Uint8Array(bin.length);\n' +
+    '  for (let j = 0; j < bin.length; j++) bytes[j] = bin.charCodeAt(j) ^ ' + keyName + '[j % ' + keyName + '.length];\n' +
+    '  return new TextDecoder().decode(bytes);\n' +
+    '}';
+  return decoderStub + '\n\n' + out.join('');
+}
+
 /** 產生完整的 .user.js。回傳 {code, warns, stats} */
 function generateScript(opts) {
   opts = Object.assign({ comments: true, embed: false }, opts);
   const G = { opts, helpers: new Set(), grants: new Set(), connect: false, exts: new Set(), loops: [], warns: [], varMap: new Map(), varUsed: new Set(), funcMap: new Map(), extra: [], flagCount: 0 };
+  G.obfuscate = scanObfuscateLevel();
   const usedNames = new Set();
-  state.variables.forEach((v) => G.varMap.set(v.id, safeIdent(v.name, 'v', usedNames)));
+  state.variables.forEach((v) => G.varMap.set(v.id, G.obfuscate === 'heavy' ? safeIdent('v_' + Math.random().toString(36).slice(2, 7), 'v', usedNames) : safeIdent(v.name, 'v', usedNames)));
   state.scripts.forEach((s) => {
     if (s.stack && s.stack.op === 'hat_func') {
       const n = String(s.stack.args.NAME == null ? '' : s.stack.args.NAME).trim();
-      if (n && !G.funcMap.has(n)) G.funcMap.set(n, safeIdent('fn_' + n, 'fn', usedNames));
+      if (n && !G.funcMap.has(n)) G.funcMap.set(n, G.obfuscate === 'heavy' ? safeIdent('f_' + Math.random().toString(36).slice(2, 7), 'fn', usedNames) : safeIdent('fn_' + n, 'fn', usedNames));
     }
   });
   const funcs = [], scripts = [];
@@ -4810,7 +5030,7 @@ function generateScript(opts) {
     G.loops = [];
     hats++;
     let code = genBlock(G, head, d);
-    if (opts.comments) code = '// ' + labelText(head, d) + '\n' + code;
+    if (opts.comments && !G.obfuscate) code = '// ' + labelText(head, d) + '\n' + code;
     if (d.section === 'func') funcs.push(code); else scripts.push({ code, immediate: head.op === 'hat_start' });
   });
   // 「當腳本啟動時」會馬上執行，先把其他事件都登記好，才不會漏掉它廣播的訊息
@@ -4837,7 +5057,12 @@ function generateScript(opts) {
   if (decl.length || G.extra.length) body.push(tr('// ===== 變數與清單 =====') + '\n' + decl.concat(G.extra).join('\n'));
   if (funcs.length) body.push(tr('// ===== 函式 =====') + '\n' + funcs.join('\n\n'));
   body.push(tr('// ===== 腳本 =====') + '\n' + (scripts.length ? scripts.map((x) => x.code).join('\n\n') : tr('// （還沒有任何事件積木。請從「事件」分類拖一個積木到工作區）')));
-  out.push('(function () {', "  'use strict';", '', ind(body.join('\n\n')), '})();');
+  let innerBody = body.join('\n\n');
+  if (G.obfuscate) {
+    innerBody = obfuscateBody(innerBody, G.obfuscate, usedNames);
+    G.warns.push(tr(G.obfuscate === 'heavy' ? '已套用程式碼混淆（高強度：字串加密＋函式與變數改名）' : '已套用程式碼混淆（字串加密）'));
+  }
+  out.push('(function () {', "  'use strict';", '', ind(innerBody), '})();');
   out.push(opts.embed ? embedBlock() : '\n' + tr('// （匯出時會在檔案最後附上專案資料，之後可以用「專案 → 開啟」把這個腳本重新匯入編輯）'));
   const code = out.join('\n') + '\n';
   if (!state.meta.matches.length) G.warns.push(tr('還沒有設定「套用網址」，已先用所有網站（*://*/*）'));

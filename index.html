@@ -983,7 +983,6 @@ I18N.bundled.en = Object.assign(Object.create(null), {
 "加減乘除、比較大小、處理文字。圓形和六角形的積木可以拖進其他積木的空格裡。": "Add, subtract, multiply, divide, compare numbers and work with text. Round and hexagonal blocks can be dragged into the slots of other blocks.",
 "變數像是會記住東西的盒子，例如「分數」。清單可以放很多項目。": "A variable is like a box that remembers something, such as \"score\". A list can hold many items.",
 "把一組積木包成一個函式，之後用「執行函式」重複使用。": "Wrap a group of blocks into a function, then reuse it with \"Run function\".",
-"連到網路抓資料，或把資料永久存在瀏覽器（關掉網頁也還在）。": "Fetch data from the internet, or save data permanently in the browser (it stays even after you close the page).",
 "在畫面{POS}放一個文字按鈕 {TEXT}，按下時": "Put a text button {TEXT} at the {POS} of the screen; when pressed",
 "快速做一個按鈕": "Make a button quickly",
 "右下角": "bottom right",
@@ -1965,6 +1964,16 @@ Object.assign(I18N.bundled.en, {
   "已套用程式碼混淆（高強度：字串加密＋函式與變數改名）": "Code obfuscation applied (heavy: string encryption + renamed functions & variables)",
   "註解、元素選擇器工具、直接寫 JavaScript 的積木，以及匯出時加密混淆整支程式碼的功能。": "Comments, the element picker tool, blocks for writing JavaScript directly, and a feature to encrypt and obfuscate the whole script on export."
 });
+Object.assign(I18N.bundled.en, {
+  "設定 AI API：{PROVIDER}，網址 {URL}，金鑰 {KEY}，模型 {MODEL}": "Set up AI API: {PROVIDER}, URL {URL}, key {KEY}, model {MODEL}",
+  "OpenAI 相容格式（OpenAI、DeepSeek、Groq、OpenRouter、Ollama 等）": "OpenAI-compatible format (OpenAI, DeepSeek, Groq, OpenRouter, Ollama, etc.)",
+  "Anthropic Claude 格式": "Anthropic Claude format",
+  "你的 API 金鑰": "your API key",
+  "AI API（網址、金鑰、模型可自訂）": "AI API (URL, key & model customizable)",
+  "AI 進階設定：系統提示 {SYSTEM}，溫度 {TEMP}（留空用預設值）": "AI advanced settings: system prompt {SYSTEM}, temperature {TEMP} (leave blank for default)",
+  "問 AI：{PROMPT}": "Ask AI: {PROMPT}",
+  "連到網路抓資料，或把資料永久存在瀏覽器（關掉網頁也還在），也可以呼叫 AI API（網址、金鑰、模型皆可自訂）。": "Fetch data from the internet, save data permanently in the browser (it stays even after you close the page), or call an AI API (URL, key & model all customizable)."
+});
 
 /* =====================================================================
    積木分類、參數型別與所有內建積木
@@ -1983,7 +1992,7 @@ const CATS = [
   { id: 'op', name: '運算', color: '#2e9e44', tip: '加減乘除、比較大小、處理文字。圓形和六角形的積木可以拖進其他積木的空格裡。' },
   { id: 'var', name: '變數', color: '#d9482b', tip: '變數像是會記住東西的盒子，例如「分數」。清單可以放很多項目。' },
   { id: 'func', name: '函式', color: '#e0446a', tip: '把一組積木包成一個函式，之後用「執行函式」重複使用。' },
-  { id: 'net', name: '網路儲存', color: '#0f8f8f', tip: '連到網路抓資料，或把資料永久存在瀏覽器（關掉網頁也還在）。' },
+  { id: 'net', name: '網路儲存', color: '#0f8f8f', tip: '連到網路抓資料，或把資料永久存在瀏覽器（關掉網頁也還在），也可以呼叫 AI API（網址、金鑰、模型皆可自訂）。' },
   { id: 'tool', name: '進階', color: '#5b6472', tip: '註解、元素選擇器工具、直接寫 JavaScript 的積木，以及匯出時加密混淆整支程式碼的功能。' },
 ];
 const extCats = [];
@@ -2623,6 +2632,20 @@ def('ls_get', 'net', 'reporter', '讀取網頁的 localStorage {KEY}', { KEY: T(
 def('cookie_get', 'net', 'reporter', 'Cookie {NAME} 的值', { NAME: T('session') }, (a) => 'getCookie(' + a.NAME + ')', { rt: 'str', helpers: ['getCookie'] });
 def('cookie_set', 'net', 'stack', '設定 Cookie {NAME} ＝ {V}（保留 {D} 天）', { NAME: T('lang'), V: T('zh-TW'), D: N(30) }, (a) => 'setCookie(' + a.NAME + ', ' + a.V + ', ' + a.D + ');', { helpers: ['setCookie'] });
 
+/* =====================  AI API（網址、金鑰、模型皆可自訂）  ===================== */
+def('ai_config', 'net', 'stack', '設定 AI API：{PROVIDER}，網址 {URL}，金鑰 {KEY}，模型 {MODEL}', {
+  PROVIDER: DD([['OpenAI 相容格式（OpenAI、DeepSeek、Groq、OpenRouter、Ollama 等）', 'openai'], ['Anthropic Claude 格式', 'anthropic']], 'openai'),
+  URL: T('https://api.openai.com/v1/chat/completions'),
+  KEY: T('你的 API 金鑰'),
+  MODEL: T('gpt-4o-mini'),
+}, (a) => 'aiConfig(' + a.PROVIDER + ', ' + a.URL + ', ' + a.KEY + ', ' + a.MODEL + ');', { helpers: ['aiConfig'], group: 'AI API（網址、金鑰、模型可自訂）' });
+def('ai_advanced', 'net', 'stack', 'AI 進階設定：系統提示 {SYSTEM}，溫度 {TEMP}（留空用預設值）', {
+  SYSTEM: T(''), TEMP: T(''),
+}, (a) => 'aiAdvanced(' + a.SYSTEM + ', ' + a.TEMP + ');', { helpers: ['aiAdvanced'], group: 'AI API（網址、金鑰、模型可自訂）' });
+def('ai_chat', 'net', 'reporter', '問 AI：{PROMPT}', { PROMPT: T('請幫我用一句話總結這段文字：') },
+  (a) => '(await aiChat(' + a.PROMPT + '))',
+  { rt: 'str', helpers: ['aiChat'], grants: ['GM_xmlhttpRequest'], connect: true, group: 'AI API（網址、金鑰、模型可自訂）' });
+
 /* =====================================================================
    會被寫進匯出腳本的「工具函式」（只會輸出有用到的）
    ===================================================================== */
@@ -2824,6 +2847,65 @@ function copyText(text) {
   text = String(text);
   if (typeof GM_setClipboard === 'function') { GM_setClipboard(text); return; }
   if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(text).catch(() => {});
+}`);
+
+helper('aiConfig', [], String.raw`
+// AI API 設定：網址、金鑰、模型都可以自己改，PROVIDER 只是決定要用哪一種請求／回覆格式
+let AI_CONFIG = { provider: 'openai', url: 'https://api.openai.com/v1/chat/completions', key: '', model: 'gpt-4o-mini', system: '', temp: null };
+function aiConfig(provider, url, key, model) {
+  AI_CONFIG = Object.assign({}, AI_CONFIG, {
+    provider: String(provider || 'openai'),
+    url: String(url || AI_CONFIG.url),
+    key: String(key || ''),
+    model: String(model || AI_CONFIG.model),
+  });
+}`);
+
+helper('aiAdvanced', [], String.raw`
+function aiAdvanced(system, temp) {
+  AI_CONFIG = Object.assign({}, AI_CONFIG, {
+    system: String(system || ''),
+    temp: (temp === '' || temp == null) ? null : Number(temp),
+  });
+}`);
+
+helper('aiChat', ['aiConfig'], String.raw`
+// 呼叫設定好的 AI API，回傳文字回覆；OpenAI 相容格式走 /chat/completions 的 messages 陣列，
+// Anthropic 格式走 messages API，系統提示（system）兩邊都支援
+async function aiChat(prompt) {
+  const cfg = AI_CONFIG;
+  const isAnthropic = cfg.provider === 'anthropic';
+  const headers = isAnthropic
+    ? { 'Content-Type': 'application/json', 'x-api-key': cfg.key, 'anthropic-version': '2023-06-01' }
+    : { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + cfg.key };
+  const body = isAnthropic
+    ? Object.assign(
+        { model: cfg.model, max_tokens: 1024, messages: [{ role: 'user', content: String(prompt) }] },
+        cfg.system ? { system: cfg.system } : {},
+        cfg.temp != null ? { temperature: cfg.temp } : {}
+      )
+    : Object.assign(
+        { model: cfg.model, messages: (cfg.system ? [{ role: 'system', content: cfg.system }] : []).concat([{ role: 'user', content: String(prompt) }]) },
+        cfg.temp != null ? { temperature: cfg.temp } : {}
+      );
+  const text = await new Promise((resolve, reject) => {
+    GM_xmlhttpRequest({
+      method: 'POST',
+      url: cfg.url,
+      headers,
+      data: JSON.stringify(body),
+      onload: (r) => resolve(r.responseText),
+      onerror: () => reject(new Error('AI API 連線失敗')),
+      ontimeout: () => reject(new Error('AI API 連線逾時')),
+    });
+  });
+  let j;
+  try { j = JSON.parse(text); } catch (e) { throw new Error('AI API 回覆不是合法的 JSON：' + String(text).slice(0, 200)); }
+  if (j && j.error) throw new Error('AI API 錯誤：' + (j.error.message || JSON.stringify(j.error)));
+  const reply = isAnthropic
+    ? (j.content && j.content[0] && j.content[0].text)
+    : (j.choices && j.choices[0] && j.choices[0].message && j.choices[0].message.content);
+  return reply == null ? '' : String(reply);
 }`);
 
 helper('httpGet', [], String.raw`
@@ -4950,8 +5032,21 @@ function obShuffleWithMap(arr) {
 /** 把產生好的程式碼主體做混淆：所有一般字串（單／雙引號）換成從加密陣列即時解密，
  *  level 為 'heavy' 時，另外把共用的工具函式名稱換成隨機短名
  *  （前面不是「.」、後面不是物件屬性「:」的地方才會改名，避免誤改到外部函式庫的同名方法）。 */
+/** 判斷一個字串片段是不是「物件字面量的 key」（例如 { 'Content-Type': ... } 裡的 'Content-Type'）。
+ *  JS 的物件 key 只能是識別字、數字或「寫死」的字串，不能直接放函式呼叫；
+ *  真的是 key 的話要用「可計算 key」語法 [expr]: value 才合法，不能原地換成 expr: value。
+ *  判斷方式：往前看（跳過空白）緊接著是 { 或 ,，往後看（跳過空白）緊接著是 :。 */
+function isObjectKeyPosition(src, startIdx, endIdx) {
+  let j = startIdx - 1;
+  while (j >= 0 && /\s/.test(src[j])) j--;
+  const precededByBraceOrComma = j >= 0 && (src[j] === '{' || src[j] === ',');
+  let k = endIdx;
+  while (k < src.length && /\s/.test(src[k])) k++;
+  return precededByBraceOrComma && src[k] === ':';
+}
 function obfuscateBody(src, level, usedNames) {
-  const toks = tokenizeJS(src);
+  let offset = 0;
+  const toks = tokenizeJS(src).map((tok) => { const info = Object.assign({}, tok, { start: offset, end: offset + tok.s.length }); offset += tok.s.length; return info; });
   const strings = [];
   toks.forEach((tok) => { if (tok.t === 'str') strings.push(decodeJSStringLiteral(tok.s)); });
   const key = obRandBytes(4 + Math.floor(Math.random() * 5));
@@ -4983,7 +5078,8 @@ function obfuscateBody(src, level, usedNames) {
   const out = toks.map((tok) => {
     if (tok.t === 'str') {
       strCursor++;
-      return fnName + '(' + newPos[strCursor] + ')';
+      const call = fnName + '(' + newPos[strCursor] + ')';
+      return isObjectKeyPosition(src, tok.start, tok.end) ? ('[' + call + ']') : call;
     }
     if (tok.t === 'code' && renameMap && renameMap.size) {
       let s = tok.s;
